@@ -1,8 +1,9 @@
-#define _USE_MATH_DEFINES
-#include <cmath> 
+#include <stdint.h>
+
+typedef uint32_t ElementT;  // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
 
 
-template <typename T=double>
+template <typename T=ElementT>
 void scramble (T* data, size_t nn)
 {
     size_t n, mmax, m, j, istep, i;
@@ -25,7 +26,7 @@ void scramble (T* data, size_t nn)
 }
 
 
-template <size_t N, typename T=double>
+template <size_t N, typename T=ElementT>
 class DanielsonLanczos {
    DanielsonLanczos<N/2,T> next;
 public:
@@ -33,32 +34,24 @@ public:
       next.apply(data);
       next.apply(data+N);
  
-      T tempr,tempi,c,s;
- 
-      for (size_t i=0; i<N; i+=2) {
-        c = cos(i*M_PI/N);
-        s = -sin(i*M_PI/N);
-        tempr = data[i+N]*c - data[i+N+1]*s;
-        tempi = data[i+N]*s + data[i+N+1]*c;
-        data[i+N] = data[i]-tempr;
-        data[i+N+1] = data[i+1]-tempi;
-        data[i] += tempr;
-        data[i+1] += tempi;
+      for (size_t i=0; i<N; i++) {
+        T root = 1; /// to do: i'th root of power 2N of 1
+        T temp = root * data[i+N];
+        data[i+N] = data[i] - temp;
+        data[i] += temp;
       }
    }
 };
  
 template<typename T>
-class DanielsonLanczos<1,T> {
+class DanielsonLanczos<0,T> {
 public:
    void apply(T* data) { }
 };
 
 
 
-
-
-template <size_t P, typename T=double>
+template <size_t P, typename T=ElementT>
 class GFFT {
    enum { N = 1<<P };
    DanielsonLanczos<N,T> recursion;
