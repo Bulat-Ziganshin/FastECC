@@ -1,4 +1,5 @@
 /// Implementation of Number-Theoretical transform in the GF(P) Galois field
+#include <algorithm> 
 #include <stdint.h>
 
 typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
@@ -15,8 +16,8 @@ void scramble (T* data, size_t nn)
     j=1;
     for (i=1; i<n; i+=2) {
         if (j>i) {
-            swap(data[j-1], data[i-1]);
-            swap(data[j], data[i]);
+            std::swap(data[j-1], data[i-1]);
+            std::swap(data[j], data[i]);
         }
         m = nn;
         while (m>=2 && j>m) {
@@ -88,3 +89,14 @@ public:
       recursion.apply(data,2781828);  /// to do: replace 2781828 with root of power 2N of 1
    }
 };
+
+
+
+int main()
+{
+    ElementT *data = new ElementT[1<<20];
+    GFFT<19,ElementT,0xFFF00001> ntt;
+    for (int i=0; i<100; i++)
+        ntt.fft(data);
+    return 0;
+}
