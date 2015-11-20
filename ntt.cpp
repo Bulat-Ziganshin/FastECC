@@ -2,9 +2,12 @@
 
 
 #include <stdint.h>
+#include <inttypes.h>
+typedef unsigned __int128 uint128_t;
 
-typedef uint32_t ElementT;  // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
+typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
 typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
+typedef uint128_t FourElement;    // 4x wider type to hold intermediate MUL results
 
 
 template <typename T>
@@ -34,19 +37,24 @@ void scramble (T* data, size_t nn)
 template <ElementT P>
 ElementT ADD (ElementT X, ElementT Y)
 {
-    return ElementT( (DoubleElementT(X)+Y) % P);
+    ElementT res = X + Y;
+    return (res>=P || res<X)? res-P : res;
 }
 
 template <ElementT P>
 ElementT SUB (ElementT X, ElementT Y)
 {
-    return ElementT( ((DoubleElementT(X)+P)-Y) % P);
+    ElementT res = X - Y;
+    return res<=X? res : res+P;
 }
 
 template <ElementT P>
 ElementT MUL (ElementT X, ElementT Y)
 {
-    return ElementT( (DoubleElementT(X)*Y) % P);
+    DoubleElementT res = DoubleElementT(X)*Y;
+    DoubleElementT invP = DoubleElementT((FourElement(1)<<64) / P);
+    res -= DoubleElementT((FourElement(res)*invP) >> 64) * P;
+    return ElementT(res>=P? res-P : res);
 }
 
 
