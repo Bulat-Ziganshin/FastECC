@@ -2,10 +2,10 @@
 #include <cmath> 
 
 
-template<typename T=double>
-void scramble(T* data, unsigned nn)
+template <typename T=double>
+void scramble (T* data, size_t nn)
 {
-    unsigned n, mmax, m, j, istep, i;
+    size_t n, mmax, m, j, istep, i;
     
     // reverse-binary reindexing
     n = nn<<1;
@@ -25,7 +25,7 @@ void scramble(T* data, unsigned nn)
 }
 
 
-template<unsigned N, typename T=double>
+template <size_t N, typename T=double>
 class DanielsonLanczos {
    DanielsonLanczos<N/2,T> next;
 public:
@@ -35,7 +35,7 @@ public:
  
       T tempr,tempi,c,s;
  
-      for (unsigned i=0; i<N; i+=2) {
+      for (size_t i=0; i<N; i+=2) {
         c = cos(i*M_PI/N);
         s = -sin(i*M_PI/N);
         tempr = data[i+N]*c - data[i+N+1]*s;
@@ -58,8 +58,7 @@ public:
 
 
 
-template<unsigned P,
-         typename T=double>
+template <size_t P, typename T=double>
 class GFFT {
    enum { N = 1<<P };
    DanielsonLanczos<N,T> recursion;
