@@ -1,4 +1,5 @@
 /// Implementation of Number-Theoretical transform in the GF(P) Galois field
+#include <iostream>
 #include <algorithm> 
 #include <stdint.h>
 
@@ -31,21 +32,21 @@ void scramble (T* data, size_t nn)
 
 
 template <ElementT P>
-ElementT ADD (ElementT X, ElementT Y)
+ElementT GF_Add (ElementT X, ElementT Y)
 {
     ElementT res = X + Y;
     return (res>=P || res<X)? res-P : res;
 }
 
 template <ElementT P>
-ElementT SUB (ElementT X, ElementT Y)
+ElementT GF_Sub (ElementT X, ElementT Y)
 {
     ElementT res = X - Y;
     return res<=X? res : res+P;
 }
 
 template <ElementT P>
-ElementT MUL (ElementT X, ElementT Y)
+ElementT GF_Mul (ElementT X, ElementT Y)
 {
     return ElementT( (DoubleElementT(X)*Y) % P);
 }
@@ -57,16 +58,16 @@ class DanielsonLanczos {
    DanielsonLanczos<N/2,T,P> next;
 public:
    void apply(T* data, T root) {
-      T root_sqr = MUL<P> (root, root);  // first root of power N of 1
+      T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
       next.apply (data,   root_sqr);
       next.apply (data+N, root_sqr);
 
       T root_i = root;   // first root of power 2N of 1 
       for (size_t i=0; i<N; i++) {
-        T temp    = MUL<P> (root_i, data[i+N]);
-        data[i+N] = SUB<P> (data[i], temp);
-        data[i]   = ADD<P> (data[i], temp);
-        root_i    = MUL<P> (root_i, root);  // next root of power 2N of 1
+        T temp    = GF_Mul<P> (root_i, data[i+N]);
+        data[i+N] = GF_Sub<P> (data[i], temp);
+        data[i]   = GF_Add<P> (data[i], temp);
+        root_i    = GF_Mul<P> (root_i, root);  // next root of power 2N of 1
       }
    }
 };
@@ -80,23 +81,52 @@ public:
 
 
 template <size_t Exp, typename T, T P>
-class GFFT {
+class NTT {
    enum { N = 1<<Exp };
    DanielsonLanczos<N,T,P> recursion;
 public:
-   void fft(T* data) {
+   void ntt(T* data) {
+      T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
+      for (int i=20; --i>Exp; )
+          root = GF_Mul<P> (root, root);  // find root of 1 of power 2N
       scramble(data,N);
-      recursion.apply(data,2781828);  /// to do: replace 2781828 with root of power 2N of 1
+      recursion.apply(data,root);
    }
 };
 
 
 
+// Find first root of 1 of power 2**N
+template <typename T, T P>
+void FindRoot (int N)
+{
+    for (T i=2; i<P; i++)
+    {
+        T q = i;
+        for (int j=0; j<N; j++)
+        {
+            if (q==1)  goto next;
+            q = GF_Mul<P> (q,q);
+        }
+        if (q==1)
+        { 
+            std::cout << i << "\n";
+            break;
+        }
+next:;        
+    }
+}
+
+
+
 int main()
 {
+    const ElementT P = 0xFFF00001;
+    // FindRoot<ElementT,P>(20);  // prints 1557
+
     ElementT *data = new ElementT[1<<20];
-    GFFT<19,ElementT,0xFFF00001> ntt;
+    NTT<19,ElementT,P> transformer;
     for (int i=0; i<100; i++)
-        ntt.fft(data);
+        transformer.ntt(data);
     return 0;
 }
