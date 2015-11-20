@@ -5,12 +5,12 @@ typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer fo
 typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
 
 
+// Reverse-binary reindexing
 template <typename T>
 void scramble (T* data, size_t nn)
 {
     size_t n, mmax, m, j, istep, i;
     
-    // reverse-binary reindexing
     n = nn<<1;
     j=1;
     for (i=1; i<n; i+=2) {
@@ -55,15 +55,17 @@ template <size_t N, typename T, T P>
 class DanielsonLanczos {
    DanielsonLanczos<N/2,T,P> next;
 public:
-   void apply(T* data) {
-      next.apply(data);
-      next.apply(data+N);
- 
+   void apply(T* data, T root) {
+      T root_sqr = MUL<P> (root, root);  // first root of power N of 1
+      next.apply (data,   root_sqr);
+      next.apply (data+N, root_sqr);
+
+      T root_i = root;   // first root of power 2N of 1 
       for (size_t i=0; i<N; i++) {
-        T root = 1; /// to do: i'th root of power 2N of 1
-        T temp = MUL<P> (root, data[i+N]);
+        T temp    = MUL<P> (root_i, data[i+N]);
         data[i+N] = SUB<P> (data[i], temp);
         data[i]   = ADD<P> (data[i], temp);
+        root_i    = MUL<P> (root_i, root);  // next root of power 2N of 1
       }
    }
 };
@@ -71,7 +73,7 @@ public:
 template<typename T, T P>
 class DanielsonLanczos<0,T,P> {
 public:
-   void apply(T* data) { }
+   void apply(T* data, T root) { }
 };
 
 
@@ -83,6 +85,6 @@ class GFFT {
 public:
    void fft(T* data) {
       scramble(data,N);
-      recursion.apply(data);
+      recursion.apply(data,2781828);  /// to do: replace 2781828 with root of power 2N of 1
    }
 };
