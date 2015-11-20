@@ -1,13 +1,8 @@
 /// Implementation of Number-Theoretical transform in the GF(P) Galois field
-
-
 #include <stdint.h>
-#include <inttypes.h>
-typedef unsigned __int128 uint128_t;
 
 typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
 typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
-typedef uint128_t FourElement;    // 4x wider type to hold intermediate MUL results
 
 
 template <typename T>
@@ -51,10 +46,7 @@ ElementT SUB (ElementT X, ElementT Y)
 template <ElementT P>
 ElementT MUL (ElementT X, ElementT Y)
 {
-    DoubleElementT res = DoubleElementT(X)*Y;
-    DoubleElementT invP = DoubleElementT((FourElement(1)<<64) / P);
-    res -= DoubleElementT((FourElement(res)*invP) >> 64) * P;
-    return ElementT(res>=P? res-P : res);
+    return ElementT( (DoubleElementT(X)*Y) % P);
 }
 
 
