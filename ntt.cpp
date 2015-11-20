@@ -1,9 +1,13 @@
+/// Implementation of Number-Theoretical transform in the GF(P) Galois field
+
+
 #include <stdint.h>
 
 typedef uint32_t ElementT;  // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
+typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
 
 
-template <typename T=ElementT>
+template <typename T>
 void scramble (T* data, size_t nn)
 {
     size_t n, mmax, m, j, istep, i;
@@ -26,9 +30,30 @@ void scramble (T* data, size_t nn)
 }
 
 
-template <size_t N, typename T=ElementT>
+
+template <ElementT P>
+ElementT ADD (ElementT X, ElementT Y)
+{
+    return ElementT( (DoubleElementT(X)+Y) % P);
+}
+
+template <ElementT P>
+ElementT SUB (ElementT X, ElementT Y)
+{
+    return ElementT( ((DoubleElementT(X)+P)-Y) % P);
+}
+
+template <ElementT P>
+ElementT MUL (ElementT X, ElementT Y)
+{
+    return ElementT( (DoubleElementT(X)*Y) % P);
+}
+
+
+
+template <size_t N, typename T, T P>
 class DanielsonLanczos {
-   DanielsonLanczos<N/2,T> next;
+   DanielsonLanczos<N/2,T,P> next;
 public:
    void apply(T* data) {
       next.apply(data);
@@ -36,25 +61,25 @@ public:
  
       for (size_t i=0; i<N; i++) {
         T root = 1; /// to do: i'th root of power 2N of 1
-        T temp = root * data[i+N];
-        data[i+N] = data[i] - temp;
-        data[i] += temp;
+        T temp = MUL<P> (root, data[i+N]);
+        data[i+N] = SUB<P> (data[i], temp);
+        data[i]   = ADD<P> (data[i], temp);
       }
    }
 };
  
-template<typename T>
-class DanielsonLanczos<0,T> {
+template<typename T, T P>
+class DanielsonLanczos<0,T,P> {
 public:
    void apply(T* data) { }
 };
 
 
 
-template <size_t P, typename T=ElementT>
+template <size_t Exp, typename T, T P>
 class GFFT {
-   enum { N = 1<<P };
-   DanielsonLanczos<N,T> recursion;
+   enum { N = 1<<Exp };
+   DanielsonLanczos<N,T,P> recursion;
 public:
    void fft(T* data) {
       scramble(data,N);
