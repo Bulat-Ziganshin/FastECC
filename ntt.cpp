@@ -65,9 +65,8 @@ ElementT GF_Mul2 (ElementT X, ElementT Y)
     const DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;                          // == invP & (~1)
     const ElementT       invP32  = ElementT(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);    // we can't use 1<<64 for exact invP computation, so we add one when required in other way
     DoubleElementT res = DoubleElementT(X)*Y;
-    ElementT res32 = ElementT(res >> 32);
-    res -= (res32 + ((DoubleElementT(res32)*invP32) >> 32)) * P;
-    return ElementT(res>=2*DoubleElementT(P)? res-2*P : (res>=P? res-P : res));
+    res  -=  ((res + (res>>32)*invP32) >> 32) * P;
+    return ElementT(res>=P? ElementT(res)-P : res);
 }
 
 // GF_Mul1 is optimized for 64-bit CPUs
