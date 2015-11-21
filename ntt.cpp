@@ -62,20 +62,11 @@ ElementT GF_Mul1 (ElementT X, ElementT Y)
 template <ElementT P>
 ElementT GF_Mul2 (ElementT X, ElementT Y)
 {
-    const ElementT invP32 = ElementT(((DoubleElementT(1)<<63) / P) << 1) + 1;
-//    const ElementT invP32 = DoubleElementT(invP32a)*P > DoubleElementT(invP32a+1)*P? invP32a : invP32a+1;
+    const DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;                          // == invP & (~1)
+    const ElementT       invP32  = ElementT(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);    // we can't use 1<<64 for exact invP computation, so we add one when required in other way
     DoubleElementT res = DoubleElementT(X)*Y;
     ElementT res32 = ElementT(res >> 32);
     res -= (res32 + ((DoubleElementT(res32)*invP32) >> 32)) * P;
-/*    
-static ElementT maxdiv = 0;   
-ElementT div = res/P;
-if (maxdiv < div)    
-{
-  maxdiv = div;
-  std::cout << std::hex << X << " * " << Y << " = " << res << " ("  << div << "), " << invP32 << "\n";
-}                
-*/
     return ElementT(res>=2*DoubleElementT(P)? res-2*P : (res>=P? res-P : res));
 }
 
