@@ -1,4 +1,4 @@
-/// Implementation of Number-Theoretical transform in the GF(P) Galois field
+/// Implementation of the Number-Theoretical Transform in GF(P) Galois field
 #include <iostream>
 #include <algorithm> 
 #include <stdint.h>
@@ -59,8 +59,16 @@ class DanielsonLanczos {
 public:
    void apply(T* data, T root) {
       T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
-      next.apply (data,   root_sqr);
-      next.apply (data+N, root_sqr);
+      if (N>8192) {
+          #pragma omp task
+          next.apply (data,   root_sqr);
+          #pragma omp task
+          next.apply (data+N, root_sqr);
+          #pragma omp taskwait
+      } else {
+          next.apply (data,   root_sqr);
+          next.apply (data+N, root_sqr);
+      }
 
       T root_i = root;   // first root of power 2N of 1 
       for (size_t i=0; i<N; i++) {
@@ -125,7 +133,11 @@ int main()
     // FindRoot<ElementT,P>(20);  // prints 1557
 
     ElementT *data = new ElementT[1<<20];
+    for (int i=0; i<(1<<20); i++)
+        data[i] = i;
     NTT<19,ElementT,P> transformer;
+    #pragma omp parallel num_threads(16)
+    #pragma omp single
     for (int i=0; i<100; i++)
         transformer.ntt(data);
     return 0;
