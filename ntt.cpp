@@ -3,6 +3,14 @@
 #include <algorithm> 
 #include <stdint.h>
 
+#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
+#define MY_CPU_AMD64
+#endif
+
+#if defined(MY_CPU_AMD64) || defined(_M_IA64)
+#define MY_CPU_64BIT
+#endif
+
 typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
 typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
 
@@ -46,10 +54,37 @@ ElementT GF_Sub (ElementT X, ElementT Y)
 }
 
 template <ElementT P>
-ElementT GF_Mul (ElementT X, ElementT Y)
+ElementT GF_Mul1 (ElementT X, ElementT Y)
 {
     return ElementT( (DoubleElementT(X)*Y) % P);
 }
+
+template <ElementT P>
+ElementT GF_Mul2 (ElementT X, ElementT Y)
+{
+    const ElementT invP32 = ElementT(((DoubleElementT(1)<<63) / P) << 1) + 1;
+//    const ElementT invP32 = DoubleElementT(invP32a)*P > DoubleElementT(invP32a+1)*P? invP32a : invP32a+1;
+    DoubleElementT res = DoubleElementT(X)*Y;
+    ElementT res32 = ElementT(res >> 32);
+    res -= (res32 + ((DoubleElementT(res32)*invP32) >> 32)) * P;
+/*    
+static ElementT maxdiv = 0;   
+ElementT div = res/P;
+if (maxdiv < div)    
+{
+  maxdiv = div;
+  std::cout << std::hex << X << " * " << Y << " = " << res << " ("  << div << "), " << invP32 << "\n";
+}                
+*/
+    return ElementT(res>=2*DoubleElementT(P)? res-2*P : (res>=P? res-P : res));
+}
+
+// GF_Mul1 is optimized for 64-bit CPUs
+#ifdef MY_CPU_64BIT
+#define GF_Mul GF_Mul1
+#else
+#define GF_Mul GF_Mul2
+#endif
 
 
 
@@ -126,10 +161,28 @@ next:;
 }
 
 
+// Test the GF_Mul2 correctness
+template <ElementT P>
+void Test_GF_Mul2()
+{
+    int n = 0;
+    for (ElementT i=P; --i; )
+    {
+        std::cout << std::hex << "\r" << i << "...";
+        for (ElementT j=i; --j; )
+            if (GF_Mul1<P> (i,j)  !=  GF_Mul2<P> (i,j))
+            {
+                std::cout << std::hex << "\r" << i << "*" << j << "=" << GF_Mul1<P> (i,j) << " != " << GF_Mul2<P> (i,j) << "\n" ;
+                if (++n>10) return;
+            }          
+    }
+}
+
 
 int main()
 {
     const ElementT P = 0xFFF00001;
+    // Test_GF_Mul2<P>(); 
     // FindRoot<ElementT,P>(20);  // prints 1557
 
     ElementT *data = new ElementT[1<<20];
