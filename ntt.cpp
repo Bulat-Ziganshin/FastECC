@@ -53,14 +53,16 @@ ElementT GF_Sub (ElementT X, ElementT Y)
     return res<=X? res : res+P;
 }
 
+// GF_Mul64 is optimized for 64-bit CPUs
 template <ElementT P>
-ElementT GF_Mul1 (ElementT X, ElementT Y)
+ElementT GF_Mul64 (ElementT X, ElementT Y)
 {
     return ElementT( (DoubleElementT(X)*Y) % P);
 }
 
+// GF_Mul32 is optimized for 32-bit CPUs, SIMD and GPUs
 template <ElementT P>
-ElementT GF_Mul2 (ElementT X, ElementT Y)
+ElementT GF_Mul32 (ElementT X, ElementT Y)
 {
     const DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;                          // == invP & (~1)
     const ElementT       invP32  = ElementT(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);    // we can't use 1<<64 for exact invP computation, so we add one when required in other way
@@ -69,11 +71,10 @@ ElementT GF_Mul2 (ElementT X, ElementT Y)
     return ElementT(res>=P? ElementT(res)-P : res);
 }
 
-// GF_Mul1 is optimized for 64-bit CPUs
 #ifdef MY_CPU_64BIT
-#define GF_Mul GF_Mul1
+#define GF_Mul GF_Mul64
 #else
-#define GF_Mul GF_Mul2
+#define GF_Mul GF_Mul32
 #endif
 
 
@@ -151,18 +152,18 @@ next:;
 }
 
 
-// Test the GF_Mul2 correctness
+// Test the GF_Mul32 correctness
 template <ElementT P>
-void Test_GF_Mul2()
+void Test_GF_Mul32()
 {
     int n = 0;
     for (ElementT i=P; --i; )
     {
         std::cout << std::hex << "\r" << i << "...";
         for (ElementT j=i; --j; )
-            if (GF_Mul1<P> (i,j)  !=  GF_Mul2<P> (i,j))
+            if (GF_Mul64<P> (i,j)  !=  GF_Mul32<P> (i,j))
             {
-                std::cout << std::hex << "\r" << i << "*" << j << "=" << GF_Mul1<P> (i,j) << " != " << GF_Mul2<P> (i,j) << "\n" ;
+                std::cout << std::hex << "\r" << i << "*" << j << "=" << GF_Mul64<P> (i,j) << " != " << GF_Mul32<P> (i,j) << "\n" ;
                 if (++n>10) return;
             }          
     }
@@ -172,7 +173,7 @@ void Test_GF_Mul2()
 int main()
 {
     const ElementT P = 0xFFF00001;
-    // Test_GF_Mul2<P>(); 
+    // Test_GF_Mul32<P>(); 
     // FindRoot<ElementT,P>(20);  // prints 1557
 
     ElementT *data = new ElementT[1<<20];
