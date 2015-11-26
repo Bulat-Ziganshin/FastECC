@@ -80,51 +80,37 @@ ElementT GF_Mul32 (ElementT X, ElementT Y)
 
 
 
-template <size_t N, size_t SIZE, typename T, T P>
-class DanielsonLanczos 
+template <typename T, T P>
+void apply (T* data, size_t N, size_t SIZE, T root) 
 {
-    DanielsonLanczos<N/2,SIZE,T,P> next;
-public:
-    void apply (T* data, T root) 
-    {
-        T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
-        if (N>1024) {
-            #pragma omp task
-            next.apply (data,   root_sqr);
-            #pragma omp task
-            next.apply (data+N, root_sqr);
-            #pragma omp taskwait
-        } else {
-            next.apply (data,   root_sqr);
-            next.apply (data+N, root_sqr);
-        }
-
-        T root_i = root;   // first root of power 2N of 1 
-        for (size_t i=0; i<N*SIZE; i+=SIZE) {
-            for (size_t k=0; k<SIZE; k++) {
-                size_t i1 = i+k, i2 = i+k+N*SIZE;
-                T temp   = GF_Mul<P> (root_i, data[i2]);
-                data[i2] = GF_Sub<P> (data[i1], temp);
-                data[i1] = GF_Add<P> (data[i1], temp);
-            }
-            root_i = GF_Mul<P> (root_i, root);  // next root of power 2N of 1
-        }
+    T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
+    if (N>1024) {
+        #pragma omp task
+        apply<T,P> (data,   N/2, SIZE, root_sqr);
+        #pragma omp task
+        apply<T,P> (data+N, N/2, SIZE, root_sqr);
+        #pragma omp taskwait
+    } else if (N>1) {
+        apply<T,P> (data,   N/2, SIZE, root_sqr);
+        apply<T,P> (data+N, N/2, SIZE, root_sqr);
     }
-};
+
+    T root_i = root;   // first root of power 2N of 1 
+    for (size_t i=0; i<N*SIZE; i+=SIZE) {
+        for (size_t k=0; k<SIZE; k++) {
+            size_t i1 = i+k, i2 = i+k+N*SIZE;
+            T temp   = GF_Mul<P> (root_i, data[i2]);
+            data[i2] = GF_Sub<P> (data[i1], temp);
+            data[i1] = GF_Add<P> (data[i1], temp);
+        }
+        root_i = GF_Mul<P> (root_i, root);  // next root of power 2N of 1
+    }
+}
  
-template<size_t SIZE, typename T, T P>
-class DanielsonLanczos<0,SIZE,T,P> {
-public:
-   void apply(T* data, T root) { }
-};
-
-
-
 template <size_t Exp, size_t SIZE, typename T, T P>
 class NTT 
 {
     enum { N = 1<<Exp };
-    DanielsonLanczos<N,SIZE,T,P> recursion;
 public:
     void ntt (T* data) 
     {
@@ -132,7 +118,7 @@ public:
         for (int i=20; --i>Exp; )
             root = GF_Mul<P> (root, root);  // find root of 1 of power 2N
         scramble(data,N);
-        recursion.apply(data,root);
+        apply<T,P> (data, N, SIZE, root);
     }
 };
 
