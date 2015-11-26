@@ -15,30 +15,6 @@ typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer fo
 typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
 
 
-// Reverse-binary reindexing
-template <typename T>
-void scramble (T* data, size_t nn)
-{
-    size_t n, mmax, m, j, istep, i;
-    
-    n = nn<<1;
-    j=1;
-    for (i=1; i<n; i+=2) {
-        if (j>i) {
-            std::swap(data[j-1], data[i-1]);
-            std::swap(data[j], data[i]);
-        }
-        m = nn;
-        while (m>=2 && j>m) {
-            j -= m;
-            m >>= 1;
-        }
-        j += m;
-    };
-}
-
-
-
 template <ElementT P>
 ElementT GF_Add (ElementT X, ElementT Y)
 {
@@ -117,7 +93,6 @@ public:
         T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
         for (int i=20; --i>Exp; )
             root = GF_Mul<P> (root, root);  // find root of 1 of power 2N
-        scramble(data,N);
         apply<T,P> (data, N, SIZE, root);
     }
 };
