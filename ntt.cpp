@@ -29,12 +29,33 @@ ElementT GF_Sub (ElementT X, ElementT Y)
     return res + (res>X)*P;   // res<=X? res : res+P
 }
 
+#if 0  
+// Alternative GF_Mul64 implementation
+
+#include <inttypes.h>
+typedef unsigned __int128 uint128_t;
+typedef uint128_t FourElement;    // 4x wider type to hold intermediate MUL results
+
+template <ElementT P>
+ElementT GF_Mul64 (ElementT X, ElementT Y)
+{
+    //return ElementT( (DoubleElementT(X)*Y) % P);
+    DoubleElementT res = DoubleElementT(X)*Y;
+    DoubleElementT invP = DoubleElementT((FourElement(1)<<64) / P);
+    res -= DoubleElementT(((res)*FourElement(invP)) >> 64) * P;
+    return ElementT(res>=P? res-P : res);
+}
+
+#else
+
 // GF_Mul64 is optimized for 64-bit CPUs
 template <ElementT P>
 ElementT GF_Mul64 (ElementT X, ElementT Y)
 {
     return ElementT( (DoubleElementT(X)*Y) % P);
 }
+
+#endif
 
 // GF_Mul32 is optimized for 32-bit CPUs, SIMD and GPUs
 template <ElementT P>
