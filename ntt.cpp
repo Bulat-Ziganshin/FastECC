@@ -80,23 +80,23 @@ ElementT GF_Mul32 (ElementT X, ElementT Y)
 
 
 
-template <size_t N, typename T, T P>
+template <size_t N, size_t SIZE, typename T, T P>
 class DanielsonLanczos 
 {
-    DanielsonLanczos<N/2,T,P> next;
+    DanielsonLanczos<N/2,SIZE,T,P> next;
 public:
-    void apply (T* data, size_t SIZE, T root) 
+    void apply (T* data, T root) 
     {
         T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
-        if (N>8192) {
+        if (N>1024) {
             #pragma omp task
-            next.apply (data,   SIZE, root_sqr);
+            next.apply (data,   root_sqr);
             #pragma omp task
-            next.apply (data+N, SIZE, root_sqr);
+            next.apply (data+N, root_sqr);
             #pragma omp taskwait
         } else {
-            next.apply (data,   SIZE, root_sqr);
-            next.apply (data+N, SIZE, root_sqr);
+            next.apply (data,   root_sqr);
+            next.apply (data+N, root_sqr);
         }
 
         T root_i = root;   // first root of power 2N of 1 
@@ -112,27 +112,27 @@ public:
     }
 };
  
-template<typename T, T P>
-class DanielsonLanczos<0,T,P> {
+template<size_t SIZE, typename T, T P>
+class DanielsonLanczos<0,SIZE,T,P> {
 public:
-   void apply(T* data, size_t SIZE, T root) { }
+   void apply(T* data, T root) { }
 };
 
 
 
-template <size_t Exp, typename T, T P>
+template <size_t Exp, size_t SIZE, typename T, T P>
 class NTT 
 {
     enum { N = 1<<Exp };
-    DanielsonLanczos<N,T,P> recursion;
+    DanielsonLanczos<N,SIZE,T,P> recursion;
 public:
-    void ntt (T* data, size_t SIZE) 
+    void ntt (T* data) 
     {
         T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
         for (int i=20; --i>Exp; )
             root = GF_Mul<P> (root, root);  // find root of 1 of power 2N
         scramble(data,N);
-        recursion.apply(data,SIZE,root);
+        recursion.apply(data,root);
     }
 };
 
@@ -188,9 +188,9 @@ int main()
     ElementT *data = new ElementT[SIZE];
     for (int i=0; i<SIZE; i++)
         data[i] = i;
-    NTT<19,ElementT,P> transformer;
+    NTT<19,SIZE/1048576,ElementT,P> transformer;
     #pragma omp parallel num_threads(16)
     #pragma omp single
-    transformer.ntt(data,SIZE>>20);
+    transformer.ntt(data);
     return 0;
 }
