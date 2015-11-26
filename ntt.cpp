@@ -19,14 +19,14 @@ template <ElementT P>
 ElementT GF_Add (ElementT X, ElementT Y)
 {
     ElementT res = X + Y;
-    return (res>=P || res<X)? res-P : res;
+    return res - ((res>=P)+(res<X))*P;   // (res>=P || res<X)? res-P : res;
 }
 
 template <ElementT P>
 ElementT GF_Sub (ElementT X, ElementT Y)
 {
     ElementT res = X - Y;
-    return res<=X? res : res+P;
+    return res + (res>X)*P;   // res<=X? res : res+P
 }
 
 // GF_Mul64 is optimized for 64-bit CPUs
@@ -45,7 +45,7 @@ ElementT GF_Mul32 (ElementT X, ElementT Y)
     const ElementT       invP32  = ElementT(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);    // we can't use 1<<64 for exact invP computation so, when required, we add one in other way
     DoubleElementT res = DoubleElementT(X)*Y;
     res  -=  ((res + (res>>32)*invP32) >> 32) * P;    // The same as res -= ((res*invP) >> 64) * P, where invP = (2**64)/P, but optimized for 32-bit computations
-    return ElementT(res>=P? ElementT(res)-P : res);
+    return ElementT(res>=P? res-P : res);
 }
 
 #ifdef MY_CPU_64BIT
