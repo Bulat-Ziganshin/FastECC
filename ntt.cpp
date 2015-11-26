@@ -39,10 +39,21 @@ typedef uint128_t FourElement;    // 4x wider type to hold intermediate MUL resu
 template <ElementT P>
 ElementT GF_Mul64 (ElementT X, ElementT Y)
 {
-    //return ElementT( (DoubleElementT(X)*Y) % P);
     DoubleElementT res = DoubleElementT(X)*Y;
     DoubleElementT invP = DoubleElementT((FourElement(1)<<64) / P);
     res -= DoubleElementT(((res)*FourElement(invP)) >> 64) * P;
+    return ElementT(res>=P? res-P : res);
+}
+
+#elif _MSC_VER
+
+template <ElementT P>
+ElementT GF_Mul64 (ElementT X, ElementT Y)
+{
+    const DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;                  
+    const DoubleElementT invP    = (estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);    
+    DoubleElementT res = DoubleElementT(X)*Y;
+    res -= __umulh(res,invP) * P;
     return ElementT(res>=P? res-P : res);
 }
 
