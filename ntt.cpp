@@ -90,21 +90,22 @@ public:
         T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
         if (N>8192) {
             #pragma omp task
-            next.apply (data,   SIZE/2, root_sqr);
+            next.apply (data,   SIZE, root_sqr);
             #pragma omp task
-            next.apply (data+N, SIZE/2, root_sqr);
+            next.apply (data+N, SIZE, root_sqr);
             #pragma omp taskwait
         } else {
-            next.apply (data,   SIZE/2, root_sqr);
-            next.apply (data+N, SIZE/2, root_sqr);
+            next.apply (data,   SIZE, root_sqr);
+            next.apply (data+N, SIZE, root_sqr);
         }
 
         T root_i = root;   // first root of power 2N of 1 
-        for (size_t i=0; i<N; i++) {
-            for (size_t k=0; k<SIZE; k+=N) {
-                T temp    = GF_Mul<P> (root_i, data[k+N]);
-                data[k+N] = GF_Sub<P> (data[k], temp);
-                data[k]   = GF_Add<P> (data[k], temp);
+        for (size_t i=0; i<N*SIZE; i+=SIZE) {
+            for (size_t k=0; k<SIZE; k++) {
+                size_t i1 = i+k, i2 = i+k+N*SIZE;
+                T temp   = GF_Mul<P> (root_i, data[i2]);
+                data[i2] = GF_Sub<P> (data[i1], temp);
+                data[i1] = GF_Add<P> (data[i1], temp);
             }
             root_i = GF_Mul<P> (root_i, root);  // next root of power 2N of 1
         }
@@ -190,6 +191,6 @@ int main()
     NTT<19,ElementT,P> transformer;
     #pragma omp parallel num_threads(16)
     #pragma omp single
-    transformer.ntt(data,SIZE);
+    transformer.ntt(data,SIZE>>20);
     return 0;
 }
