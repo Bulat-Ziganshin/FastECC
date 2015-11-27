@@ -30,7 +30,7 @@ ElementT GF_Sub (ElementT X, ElementT Y)
 }
 
 #if 0  
-// Alternative GF_Mul64 implementation
+// Alternative GF_Mul64 implementation for GCC - unfortunately, GCC 4.9 generates over-smart code for it
 
 #include <inttypes.h>
 typedef unsigned __int128 uint128_t;
@@ -46,6 +46,7 @@ ElementT GF_Mul64 (ElementT X, ElementT Y)
 }
 
 #elif _MSC_VER
+// Alternative GF_Mul64 implementation made with MSVC intrinsics
 
 template <ElementT P>
 ElementT GF_Mul64 (ElementT X, ElementT Y)
@@ -74,7 +75,7 @@ ElementT GF_Mul32 (ElementT X, ElementT Y)
 {
     // invP32 := (2**64)/P - 2**32  :  if 2**31<P<2**32, then 2**32 < (2**64)/P < 2**33, and invP32 is a 32-bit value
     const DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;                          // == invP & (~1)
-    const ElementT       invP32  = ElementT(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);    // we can't use 1<<64 for exact invP computation so, when required, we add one in other way
+    const ElementT       invP32  = ElementT(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);    // we can't use 1<<64 for exact invP computation so we add the posible 1 in other way
     DoubleElementT res = DoubleElementT(X)*Y;
     res  -=  ((res + (res>>32)*invP32) >> 32) * P;    // The same as res -= ((res*invP) >> 64) * P, where invP = (2**64)/P, but optimized for 32-bit computations
     return ElementT(res>=P? res-P : res);
@@ -94,13 +95,13 @@ void apply (T* data, size_t N, size_t SIZE, T root)
     T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
     if (N>1024) {
         #pragma omp task
-        apply<T,P> (data,   N/2, SIZE, root_sqr);
+        apply<T,P> (data,        N/2, SIZE, root_sqr);
         #pragma omp task
-        apply<T,P> (data+N, N/2, SIZE, root_sqr);
+        apply<T,P> (data+N*SIZE, N/2, SIZE, root_sqr);
         #pragma omp taskwait
     } else if (N>1) {
-        apply<T,P> (data,   N/2, SIZE, root_sqr);
-        apply<T,P> (data+N, N/2, SIZE, root_sqr);
+        apply<T,P> (data,        N/2, SIZE, root_sqr);
+        apply<T,P> (data+N*SIZE, N/2, SIZE, root_sqr);
     }
 
     T root_i = root;   // first root of power 2N of 1 
@@ -181,9 +182,17 @@ int main()
     ElementT *data = new ElementT[SIZE];
     for (int i=0; i<SIZE; i++)
         data[i] = i;
+    
     NTT<19,SIZE/1048576,ElementT,P> transformer;
     #pragma omp parallel num_threads(16)
     #pragma omp single
     transformer.ntt(data);
+
+    uint32_t sum = 314159253;
+    for (int i=0; i<SIZE; i++)
+        sum = (sum+data[i])*123456791;
+    if (sum != 3267607014UL)
+        std::cout << "checksum failed: " << sum << " ";
+
     return 0;
 }
