@@ -15,14 +15,14 @@ typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer fo
 typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
 
 
-template <ElementT P>
+template <typename T, T P>
 ElementT GF_Add (ElementT X, ElementT Y)
 {
     ElementT res = X + Y;
     return res - ((res>=P)+(res<X))*P;   // (res>=P || res<X)? res-P : res;
 }
 
-template <ElementT P>
+template <typename T, T P>
 ElementT GF_Sub (ElementT X, ElementT Y)
 {
     ElementT res = X - Y;
@@ -89,46 +89,6 @@ ElementT GF_Mul32 (ElementT X, ElementT Y)
 
 
 
-template <typename T, T P>
-void apply (T* data, size_t N, size_t SIZE, T root) 
-{
-    if (N>1) {
-        T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
-        #pragma omp task if (N>1024)
-        apply<T,P> (data,        N/2, SIZE, root_sqr);
-        #pragma omp task if (N>1024)
-        apply<T,P> (data+N*SIZE, N/2, SIZE, root_sqr);
-        #pragma omp taskwait
-    }
-
-    T root_i = root;   // first root of power 2N of 1 
-    for (size_t i=0; i<N*SIZE; i+=SIZE) {
-        for (size_t k=0; k<SIZE; k++) {
-            size_t i1 = i+k, i2 = i+k+N*SIZE;
-            T temp   = GF_Mul<P> (root_i, data[i2]);
-            data[i2] = GF_Sub<P> (data[i1], temp);
-            data[i1] = GF_Add<P> (data[i1], temp);
-        }
-        root_i = GF_Mul<P> (root_i, root);  // next root of power 2N of 1
-    }
-}
- 
-template <size_t Exp, size_t SIZE, typename T, T P>
-class NTT 
-{
-    enum { N = 1<<Exp };
-public:
-    void ntt (T* data) 
-    {
-        T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
-        for (int i=20; --i>Exp; )
-            root = GF_Mul<P> (root, root);  // find root of 1 of power 2N
-        apply<T,P> (data, N, SIZE, root);
-    }
-};
-
-
-
 // Find first root of 1 of power 2**N
 template <typename T, T P>
 void FindRoot (int N)
@@ -169,24 +129,63 @@ void Test_GF_Mul32()
 }
 
 
+
+// Recursive NTT helper function
+template <typename T, T P>
+void SubNTT (T* data, size_t N, size_t SIZE, T root) 
+{
+    if (N>1) {
+        T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
+        #pragma omp task if (N>1024)
+        SubNTT<T,P> (data,        N/2, SIZE, root_sqr);
+        #pragma omp task if (N>1024)
+        SubNTT<T,P> (data+N*SIZE, N/2, SIZE, root_sqr);
+        #pragma omp taskwait
+    }
+
+    T root_i = root;   // first root of power 2N of 1 
+    for (size_t i=0; i<N*SIZE; i+=SIZE) {
+        for (size_t k=0; k<SIZE; k++) {
+            size_t i1 = i+k, i2 = i+k+N*SIZE;
+            T temp   = GF_Mul<P> (root_i, data[i2]);
+            data[i2] = GF_Sub<T,P> (data[i1], temp);
+            data[i1] = GF_Add<T,P> (data[i1], temp);
+        }
+        root_i = GF_Mul<P> (root_i, root);  // next root of power 2N of 1
+    }
+}
+
+ 
+// GF(P) NTT of N==2**X points of type T. Each point represented by SIZE elements (sequential in memory), so we perform SIZE transforms simultaneously
+template <typename T, T P>
+void NTT (size_t N, size_t SIZE, T* data) 
+{
+    T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
+    for (size_t i=1<<20; i>N; i/=2)
+        root = GF_Mul<P> (root, root);  // find root of 1 of power 2N
+    SubNTT<T,P> (data, N/2, SIZE, root);
+}
+
+
+
 int main()
 {
     const ElementT P = 0xFFF00001;
     // Test_GF_Mul32<P>(); 
     // FindRoot<ElementT,P>(20);  // prints 1557
 
-    const size_t SIZE = 128<<20;  // 512 MB
-    ElementT *data = new ElementT[SIZE];
-    for (int i=0; i<SIZE; i++)
+    const size_t N = 1<<20;   // NTT order
+    const size_t SIZE = 128;  // Block size, in 32-bit elements
+    ElementT *data = new ElementT[N*SIZE];  // 512 MB
+    for (int i=0; i<N*SIZE; i++)
         data[i] = i;
     
-    NTT<19,SIZE/1048576,ElementT,P> transformer;
     #pragma omp parallel num_threads(16)
     #pragma omp single
-    transformer.ntt(data);
-
+    NTT<ElementT,P> (N, SIZE, data);
+    
     uint32_t sum = 314159253;
-    for (int i=0; i<SIZE; i++)
+    for (int i=0; i<N*SIZE; i++)
         sum = (sum+data[i])*123456791;
     if (sum != 3267607014UL)
         printf("checksum failed: %.0lf", double(sum));
