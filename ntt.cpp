@@ -176,6 +176,18 @@ void RecursiveNTT (T* data, size_t FirstN, size_t N, size_t TOTAL, size_t SIZE, 
 template <typename T, T P>
 void IterativeNTT (T* data, size_t FirstN, size_t LastN, size_t TOTAL, size_t SIZE, T* root_ptr)
 {
+    if (FirstN == 1) {
+        FirstN = 2;  --root_ptr;
+        for (size_t x=0; x<TOTAL; x+=2*SIZE) {
+            for (size_t k=0; k<SIZE; k++) {                     // cycle over SIZE elements of the single block
+                size_t i1 = x+k, i2 = x+k+SIZE;
+                T temp   = data[i2];   // root of power 2 is always -1, so we just exchange GF_Add and GF_Sub
+                data[i2] = GF_Add<T,P> (data[i1], temp);
+                data[i1] = GF_Sub<T,P> (data[i1], temp);
+            }
+        }
+    }
+
     for (size_t N=FirstN; N<LastN; N*=2) {
         T root = *--root_ptr;
         for (size_t x=0; x<TOTAL; x+=2*N*SIZE) {
@@ -200,7 +212,7 @@ void NTT (size_t N, size_t SIZE, T* data)
 {
     T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
     for (size_t i=1<<20; i>N; i/=2)
-        root = GF_Mul<P> (root, root);  // find root of 1 of power 2N
+        root = GF_Mul<P> (root, root);  // find root of 1 of power N
     T roots[33], *root_ptr = roots;
     while (root!=1)
         *root_ptr++ = root,
@@ -210,9 +222,9 @@ void NTT (size_t N, size_t SIZE, T* data)
     {
         // Smaller N values up to S are processed iteratively
 #if defined(_OPENMP) && (_OPENMP < 200805)
-        const size_t S = 65536;   // optimized for OpenMP 2.0 - do as much work as possible in paralleled for loop
+        const size_t S = N/16;  // optimized for OpenMP 2.0 - do as much work as possible in the paralleled for loop
 #else
-        const size_t S = 128;     // otherwise stay in L2 cache
+        const size_t S = 65536/(SIZE*sizeof(T));    // otherwise stay in L2 cache
 #endif
         #pragma omp for
         for (int64_t i=0; i<N*SIZE; i+=S*SIZE)
