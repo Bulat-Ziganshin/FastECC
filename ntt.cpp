@@ -92,16 +92,13 @@ ElementT GF_Mul32 (ElementT X, ElementT Y)
 template <typename T, T P>
 void apply (T* data, size_t N, size_t SIZE, T root) 
 {
-    T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
-    if (N>1024) {
-        #pragma omp task
+    if (N>1) {
+        T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
+        #pragma omp task if (N>1024)
         apply<T,P> (data,        N/2, SIZE, root_sqr);
-        #pragma omp task
+        #pragma omp task if (N>1024)
         apply<T,P> (data+N*SIZE, N/2, SIZE, root_sqr);
         #pragma omp taskwait
-    } else if (N>1) {
-        apply<T,P> (data,        N/2, SIZE, root_sqr);
-        apply<T,P> (data+N*SIZE, N/2, SIZE, root_sqr);
     }
 
     T root_i = root;   // first root of power 2N of 1 
@@ -192,7 +189,7 @@ int main()
     for (int i=0; i<SIZE; i++)
         sum = (sum+data[i])*123456791;
     if (sum != 3267607014UL)
-        std::cout << "checksum failed: " << sum << " ";
+        printf("checksum failed: %.0lf", double(sum));
 
     return 0;
 }
