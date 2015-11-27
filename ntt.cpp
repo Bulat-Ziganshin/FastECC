@@ -142,15 +142,21 @@ void Test_GF_Mul32()
 
 // Recursive NTT implementation
 template <typename T, T P>
-void RecursiveNTT (T* data, size_t N, size_t SIZE, T* roots)
+void RecursiveNTT (T* data, size_t FirstN, size_t N, size_t TOTAL, size_t SIZE, T* roots)
 {
-    N /= 2;
-    if (N > 1) {
-        #pragma omp task if (N>1024)
-        RecursiveNTT<T,P> (data,        N, SIZE, roots+1);
-        #pragma omp task if (N>1024)
-        RecursiveNTT<T,P> (data+N*SIZE, N, SIZE, roots+1);
+    N /= 2;  TOTAL /= 2;
+    if (N >= FirstN) {
+#if _OPENMP>=200805
+        #pragma omp task if (N>16384)
+#endif
+        RecursiveNTT<T,P> (data,       FirstN, N, TOTAL, SIZE, roots+1);
+#if _OPENMP>=200805
+        #pragma omp task if (N>16384)
+#endif
+        RecursiveNTT<T,P> (data+TOTAL, FirstN, N, TOTAL, SIZE, roots+1);
+#if _OPENMP>=200805
         #pragma omp taskwait
+#endif
     }
 
     T root = *roots,   root_i = root;                   // first root of power 2N of 1
@@ -168,11 +174,11 @@ void RecursiveNTT (T* data, size_t N, size_t SIZE, T* roots)
 
 // Iterative NTT implementation
 template <typename T, T P>
-void IterativeNTT (T* data, size_t ORDER, size_t SIZE, T* root_ptr)
+void IterativeNTT (T* data, size_t FirstN, size_t LastN, size_t TOTAL, size_t SIZE, T* root_ptr)
 {
-    for (size_t N=1; N<ORDER; N*=2) {
+    for (size_t N=FirstN; N<LastN; N*=2) {
         T root = *--root_ptr;
-        for (size_t x=0; x<ORDER*SIZE; x+=2*N*SIZE) {
+        for (size_t x=0; x<TOTAL; x+=2*N*SIZE) {
             T root_i = root;                                    // first root of power 2N of 1
             for (size_t i=0; i<N*SIZE; i+=SIZE) {
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
@@ -200,8 +206,22 @@ void NTT (size_t N, size_t SIZE, T* data)
         *root_ptr++ = root,
         root = GF_Mul<P> (root, root);
 
-    RecursiveNTT<T,P> (data, N, SIZE, roots);
-    // IterativeNTT<T,P> (data, N, SIZE, root_ptr);
+    #pragma omp parallel
+    {
+        // Smaller N values up to S are processed iteratively
+#if defined(_OPENMP) && (_OPENMP < 200805)
+        const size_t S = 65536;   // optimized for OpenMP 2.0 - do as much work as possible in paralleled for loop
+#else
+        const size_t S = 128;     // otherwise stay in L2 cache
+#endif
+        #pragma omp for
+        for (int64_t i=0; i<N*SIZE; i+=S*SIZE)
+            IterativeNTT<T,P> (data+i, 1, S, S*SIZE, SIZE, root_ptr);
+
+        // Larger N values are processed recursively
+        #pragma omp master
+        RecursiveNTT<T,P> (data, 2*S, N, N*SIZE, SIZE, roots);
+    }
 }
 
 
@@ -218,8 +238,6 @@ int main()
     for (int i=0; i<N*SIZE; i++)
         data[i] = i;
 
-    #pragma omp parallel num_threads(16)
-    #pragma omp single
     NTT<ElementT,P> (N, SIZE, data);
 
     uint32_t sum = 314159253;
