@@ -11,6 +11,11 @@
 #define MY_CPU_64BIT
 #endif
 
+
+/***********************************************************************************************************************
+*** GF(P) **************************************************************************************************************
+************************************************************************************************************************/
+
 typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
 typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
 
@@ -130,28 +135,55 @@ void Test_GF_Mul32()
 
 
 
-// Recursive NTT helper function
+
+/***********************************************************************************************************************
+*** Number-Theoretical Transform in GF(P) ******************************************************************************
+************************************************************************************************************************/
+
+// Recursive NTT implementation
 template <typename T, T P>
-void SubNTT (T* data, size_t N, size_t SIZE, T root) 
+void RecursiveNTT (T* data, size_t N, size_t SIZE, T* roots)
 {
-    if (N>1) {
-        T root_sqr = GF_Mul<P> (root, root);  // first root of power N of 1
+    N /= 2;
+    if (N > 1) {
         #pragma omp task if (N>1024)
-        SubNTT<T,P> (data,        N/2, SIZE, root_sqr);
+        RecursiveNTT<T,P> (data,        N, SIZE, roots+1);
         #pragma omp task if (N>1024)
-        SubNTT<T,P> (data+N*SIZE, N/2, SIZE, root_sqr);
+        RecursiveNTT<T,P> (data+N*SIZE, N, SIZE, roots+1);
         #pragma omp taskwait
     }
 
-    T root_i = root;   // first root of power 2N of 1 
+    T root = *roots,   root_i = root;                   // first root of power 2N of 1
     for (size_t i=0; i<N*SIZE; i+=SIZE) {
-        for (size_t k=0; k<SIZE; k++) {
+        for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
             size_t i1 = i+k, i2 = i+k+N*SIZE;
             T temp   = GF_Mul<P> (root_i, data[i2]);
             data[i2] = GF_Sub<T,P> (data[i1], temp);
             data[i1] = GF_Add<T,P> (data[i1], temp);
         }
-        root_i = GF_Mul<P> (root_i, root);  // next root of power 2N of 1
+        root_i = GF_Mul<P> (root_i, root);              // next root of power 2N of 1
+    }
+}
+
+
+// Iterative NTT implementation
+template <typename T, T P>
+void IterativeNTT (T* data, size_t ORDER, size_t SIZE, T* root_ptr) 
+{
+    for (size_t N=1; N<ORDER; N*=2) {
+        T root = *--root_ptr;
+        for (size_t x=0; x<ORDER*SIZE; x+=2*N*SIZE) {
+            T root_i = root;                                    // first root of power 2N of 1 
+            for (size_t i=0; i<N*SIZE; i+=SIZE) {
+                for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
+                    size_t i1 = x+i+k, i2 = x+i+k+N*SIZE;
+                    T temp   = GF_Mul<P> (root_i, data[i2]);
+                    data[i2] = GF_Sub<T,P> (data[i1], temp);
+                    data[i1] = GF_Add<T,P> (data[i1], temp);
+                }
+                root_i = GF_Mul<P> (root_i, root);              // next root of power 2N of 1
+            }
+        }
     }
 }
 
@@ -163,7 +195,13 @@ void NTT (size_t N, size_t SIZE, T* data)
     T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
     for (size_t i=1<<20; i>N; i/=2)
         root = GF_Mul<P> (root, root);  // find root of 1 of power 2N
-    SubNTT<T,P> (data, N/2, SIZE, root);
+    T roots[33], *root_ptr = roots;
+    while (root!=1)
+        *root_ptr++ = root,
+        root = GF_Mul<P> (root, root);
+  
+    RecursiveNTT<T,P> (data, N, SIZE, roots);
+    // IterativeNTT<T,P> (data, N, SIZE, root_ptr);
 }
 
 
