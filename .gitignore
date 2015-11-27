@@ -5,6 +5,7 @@
 *.cubin
 *.fatbin
 
+Descript.ion
 *.asm
 *.lst
 *.exe
@@ -15,4 +16,3 @@
 5/*
 6/*
 7/*
-

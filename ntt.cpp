@@ -1,6 +1,6 @@
 /// Implementation of the Number-Theoretical Transform in GF(P) Galois field
 #include <iostream>
-#include <algorithm> 
+#include <algorithm>
 #include <stdint.h>
 
 #if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
@@ -34,7 +34,7 @@ ElementT GF_Sub (ElementT X, ElementT Y)
     return res + (res>X)*P;   // res<=X? res : res+P
 }
 
-#if 0  
+#if 0
 // Alternative GF_Mul64 implementation for GCC - unfortunately, GCC 4.9 generates over-smart code for it
 
 #include <inttypes.h>
@@ -56,8 +56,8 @@ ElementT GF_Mul64 (ElementT X, ElementT Y)
 template <ElementT P>
 ElementT GF_Mul64 (ElementT X, ElementT Y)
 {
-    const DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;                  
-    const DoubleElementT invP    = (estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);    
+    const DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;
+    const DoubleElementT invP    = (estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);
     DoubleElementT res = DoubleElementT(X)*Y;
     res -= __umulh(res,invP) * P;
     return ElementT(res>=P? res-P : res);
@@ -107,11 +107,11 @@ void FindRoot (int N)
             q = GF_Mul<P> (q,q);
         }
         if (q==1)
-        { 
+        {
             std::cout << i << "\n";
             break;
         }
-next:;        
+next:;
     }
 }
 
@@ -129,7 +129,7 @@ void Test_GF_Mul32()
             {
                 std::cout << std::hex << "\r" << i << "*" << j << "=" << GF_Mul64<P> (i,j) << " != " << GF_Mul32<P> (i,j) << "\n" ;
                 if (++n>10) return;
-            }          
+            }
     }
 }
 
@@ -168,12 +168,12 @@ void RecursiveNTT (T* data, size_t N, size_t SIZE, T* roots)
 
 // Iterative NTT implementation
 template <typename T, T P>
-void IterativeNTT (T* data, size_t ORDER, size_t SIZE, T* root_ptr) 
+void IterativeNTT (T* data, size_t ORDER, size_t SIZE, T* root_ptr)
 {
     for (size_t N=1; N<ORDER; N*=2) {
         T root = *--root_ptr;
         for (size_t x=0; x<ORDER*SIZE; x+=2*N*SIZE) {
-            T root_i = root;                                    // first root of power 2N of 1 
+            T root_i = root;                                    // first root of power 2N of 1
             for (size_t i=0; i<N*SIZE; i+=SIZE) {
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
                     size_t i1 = x+i+k, i2 = x+i+k+N*SIZE;
@@ -187,10 +187,10 @@ void IterativeNTT (T* data, size_t ORDER, size_t SIZE, T* root_ptr)
     }
 }
 
- 
+
 // GF(P) NTT of N==2**X points of type T. Each point represented by SIZE elements (sequential in memory), so we perform SIZE transforms simultaneously
 template <typename T, T P>
-void NTT (size_t N, size_t SIZE, T* data) 
+void NTT (size_t N, size_t SIZE, T* data)
 {
     T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
     for (size_t i=1<<20; i>N; i/=2)
@@ -199,7 +199,7 @@ void NTT (size_t N, size_t SIZE, T* data)
     while (root!=1)
         *root_ptr++ = root,
         root = GF_Mul<P> (root, root);
-  
+
     RecursiveNTT<T,P> (data, N, SIZE, roots);
     // IterativeNTT<T,P> (data, N, SIZE, root_ptr);
 }
@@ -209,7 +209,7 @@ void NTT (size_t N, size_t SIZE, T* data)
 int main()
 {
     const ElementT P = 0xFFF00001;
-    // Test_GF_Mul32<P>(); 
+    // Test_GF_Mul32<P>();
     // FindRoot<ElementT,P>(20);  // prints 1557
 
     const size_t N = 1<<20;   // NTT order
@@ -217,11 +217,11 @@ int main()
     ElementT *data = new ElementT[N*SIZE];  // 512 MB
     for (int i=0; i<N*SIZE; i++)
         data[i] = i;
-    
+
     #pragma omp parallel num_threads(16)
     #pragma omp single
     NTT<ElementT,P> (N, SIZE, data);
-    
+
     uint32_t sum = 314159253;
     for (int i=0; i<N*SIZE; i++)
         sum = (sum+data[i])*123456791;
