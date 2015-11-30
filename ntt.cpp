@@ -93,25 +93,66 @@ ElementT GF_Mul32 (ElementT X, ElementT Y)
 #endif
 
 
-
-// Find first root of 1 of power 2**N
 template <typename T, T P>
-void FindRoot (int N)
+ElementT GF_Pow (T X, size_t N)
 {
+    T res = 1;
+    for ( ; N; N/=2)
+    {
+        if (N&1)  res = GF_Mul<P> (res,X);
+        X = GF_Mul<P> (X,X);
+    }
+    return res;
+}
+
+
+
+/***********************************************************************************************************************
+*** Testing/benchmarking routines **************************************************************************************
+************************************************************************************************************************/
+
+// Find first root of 1 of power N
+template <typename T, T P>
+void FindRoot (size_t N)
+{
+    int cnt = 0;
     for (T i=2; i<P; i++)
     {
-        T q = i;
-        for (int j=0; j<N; j++)
-        {
-            if (q==1)  goto next;
-            q = GF_Mul<P> (q,q);
-        }
+        std::cout << "\r" << i << "**" << std::hex << N << std::dec << "...";
+        T q = GF_Pow<T,P> (i,N);
         if (q==1)
         {
+            if (1 == GF_Pow<T,P> (i,N/2) ||
+                1 == GF_Pow<T,P> (i,N/3) ||
+                1 == GF_Pow<T,P> (i,N/5) ||
+                1 == GF_Pow<T,P> (i,N/7) ||
+                1 == GF_Pow<T,P> (i,N/13) ||
+                0)
+                goto next;
+/*
+
+
+            for (size_t n=2; n<N; n++)
+            {
+                if (1 == GF_Pow<T,P> (i,n))
+                    goto next;
+            }
+
+            T nn = N;
+            for (size_t n=2; nn>1 && n<nn; n++)
+            {
+                while (nn>1 && nn%n==0)
+                {
+                    nn /= n;
+                    if (1 == GF_Pow<T,P> (i,N/n))
+                        goto next;
+                }
+            }
+*/
             std::cout << i << "\n";
-            break;
+            if (++cnt==10) break;
         }
-next:;
+        next:;
     }
 }
 
@@ -273,7 +314,7 @@ int main()
 {
     const ElementT P = 0xFFF00001;
     // Test_GF_Mul32<P>();
-    // FindRoot<ElementT,P>(20);  // prints 1557
+    // FindRoot<ElementT,P>(P-1);  // prints 19
     // if (BenchButterfly<ElementT,P>())  return 0;
 
     const size_t N = 1<<20;   // NTT order
