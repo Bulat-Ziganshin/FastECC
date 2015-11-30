@@ -121,10 +121,10 @@ template <ElementT P>
 void Test_GF_Mul32()
 {
     int n = 0;
-    for (ElementT i=P; --i; )
+    for (ElementT i=0; i<P; i++)
     {
-        std::cout << std::hex << "\r" << i << "...";
-        for (ElementT j=i; --j; )
+        if (i%4096==0)  std::cout << std::hex << "\r0x" << i << "...";
+        for (ElementT j=0; j<i; j++)
             if (GF_Mul64<P> (i,j)  !=  GF_Mul32<P> (i,j))
             {
                 std::cout << std::hex << "\r" << i << "*" << j << "=" << GF_Mul64<P> (i,j) << " != " << GF_Mul32<P> (i,j) << "\n" ;
@@ -134,6 +134,37 @@ void Test_GF_Mul32()
 }
 
 
+// Butterfly operation
+template <typename T, T P>
+void Butterfly (T* a, T* b, int TIMES, int SIZE, T root)
+{
+    for (int n=0; n<TIMES; n++) {
+        for (int k=0; k<SIZE; k++) {                     // cycle over SIZE elements of the single block
+            T temp = GF_Mul<P> (root, b[k]);
+            b[k] = GF_Sub<T,P> (a[k], temp);
+            a[k] = GF_Add<T,P> (a[k], temp);
+        }
+    }
+}
+
+
+// Benchmark speed of the Butterfly operation, processing 10 GB data == 500 MB processed with NTT<2**20>
+template <typename T, T P>
+int BenchButterfly()
+{
+    ElementT x=0;
+    #pragma omp parallel for
+    for (int n=0; n<8; n++)
+    {
+        const int sz = 1280;
+        ElementT a[sz], b[sz];
+        for (int i=0; i<sz; i++)
+            a[i] = i*7+1, b[i] = i*15+8;
+        Butterfly<ElementT,P> (a, b, 128*1024, sz, 1557);
+        x += a[0];
+    }
+    return x?1:0;
+}
 
 
 /***********************************************************************************************************************
@@ -243,6 +274,7 @@ int main()
     const ElementT P = 0xFFF00001;
     // Test_GF_Mul32<P>();
     // FindRoot<ElementT,P>(20);  // prints 1557
+    // if (BenchButterfly<ElementT,P>())  return 0;
 
     const size_t N = 1<<20;   // NTT order
     const size_t SIZE = 128;  // Block size, in 32-bit elements
