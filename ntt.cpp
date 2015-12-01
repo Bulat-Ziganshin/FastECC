@@ -106,10 +106,33 @@ ElementT GF_Pow (T X, size_t N)
 }
 
 
+template <typename T, T P>
+ElementT GF_Inv (T X)
+{
+    return GF_Pow<T,P> (X,P-2);
+}
+
+
 
 /***********************************************************************************************************************
 *** Testing/benchmarking routines **************************************************************************************
 ************************************************************************************************************************/
+
+template <typename T, T P>
+void Test_GF_Inv()
+{
+    int cnt = 0;
+    for (T i=1; i<P; i++)
+    {
+        if (i%(1<<20)==0)  std::cout << std::hex << "\r0x" << i << "...";
+        if (GF_Mul<P>(i, GF_Inv<T,P>(i)) != 1)
+        {
+            std::cout << i << "\n";
+            if (++cnt==10) break;
+        }
+    }
+}
+
 
 // Find first root of 1 of power N
 template <typename T, T P>
@@ -313,6 +336,7 @@ void NTT (size_t N, size_t SIZE, T* data)
 int main()
 {
     const ElementT P = 0xFFF00001;
+    // Test_GF_Inv<ElementT,P>();
     // Test_GF_Mul32<P>();
     // FindRoot<ElementT,P>(P-1);  // prints 19
     // if (BenchButterfly<ElementT,P>())  return 0;
