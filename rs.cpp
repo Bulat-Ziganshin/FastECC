@@ -51,35 +51,6 @@ void generate_positions(int N, int K, int *pos)
     } while (size);
 }
 
-void generate_message(byte *data, int size)
-{
-    int *p = (int *)data;
-    size >>=2;
-    int i;
-    for (i=0; i<size; i++) {
-        *p++ = genrand();
-    }
-}
-
-int compare_message(byte *p, byte *q, int size)
-{
-    int *pi = (int *)p;
-    int *qi = (int *)q;
-    size >>=2;
-    int res=0;
-    int i;
-    for (i=0; i<size; i++) {
-        if (pi[i]!=qi[i]) {
-            res++;
-            if (res<100) {
-                printf("%d ",i*4);
-            }
-        }
-    }
-    printf("\n");
-    return res;
-}
-
 // *******************************************************
 
 double get_sec(clock_t diff)
@@ -176,99 +147,6 @@ int get_log(int n)
     return i;
 }
 
-void reverse(int *vect, int n)
-{
-    int i,j;
-
-    j=n >> 1;
-    for (i=1; i<n; i++)
-    {
-        if (j > i) {
-            int temp=vect[i];
-            vect[i]=vect[j];
-            vect[j]=temp;
-        }
-
-        int m = n >> 1;
-        while (m >= 1 && (j & m)) {
-            j ^= m;
-            m >>= 1;
-        }
-        j += m;
-    }
-}
-
-void fft_dit(int *vect, int n)
-{
-    reverse(vect, n);
-
-    int i,j;
-
-    int step=1;
-    int number=n/2;
-    int mult=15;
-    while (number>0)
-    {
-        int *p=vect;
-        int *q=vect+step;
-        for (i=0; i<number; i++) {
-            for (j=0; j<step; j++) {
-                int a = *p;
-                int b = field_mult_no(*q, exp[j<<mult]);
-                *(p++) = field_sum(a,b);
-                *(q++) = field_diff(a,b);
-            }
-            p+=step;
-            q+=step;
-        }
-        step<<=1;
-        number>>=1;
-        mult--;
-    }
-}
-
-void ifft_dit(int *vect, int n)
-{
-    reverse(vect, n);
-
-    int i,j;
-
-    int step=1;
-    int number=n/2;
-    int mult=15;
-    while (number>0)
-    {
-        int *p=vect;
-        int *q=vect+step;
-        for (i=0; i<number; i++) {
-            for (j=2*step; j>step; j--) {
-                int a = *p;
-                int b = field_mult_no(*q, exp[j<<mult]);
-                *(p++) = field_sum(a,b);
-                *(q++) = field_diff(a,b);
-            }
-            p+=step;
-            q+=step;
-        }
-        step<<=1;
-        number>>=1;
-        mult--;
-    }
-}
-
-
-void fft2(int *vect, int n)
-{
-    int i=n/2;
-    while (i--) {
-        int a = *vect;
-        int b = *(vect+1);
-        *(vect++) = field_sum(a,b);
-        *(vect++) = field_diff(a,b);
-    }
-}
-
-
 // decimation in frequency
 void fft_inc(int *vect, int n)
 {
@@ -330,34 +208,6 @@ void ifft_inc(int *vect, int n)
         number>>=1;
         mult--;
     }
-}
-
-void fft_rec(int *vect, int n)
-{
-//    if (n==1024) return fft_inc(vect, n);
-    if (n==2) {
-        int a = vect[0];
-        int b = vect[1];
-        vect[0] = field_sum(a,b);
-        vect[1] = field_diff(a,b);
-        return;
-    }
-
-    int i;
-    int mult = 16 - get_log(n);
-
-    n/=2;
-    int *l = vect;
-    int *h = vect + n;
-    for (i=0; i<n; i++) {
-        int a = *l;
-        int b = *h;
-        *(l++) = field_sum(a,b);
-        *(h++) = field_mult_no(field_diff(a,b), exp[i<<mult]);
-    }
-
-    fft_rec(vect, n);
-    fft_rec(vect+n, n);
 }
 
 void fft_rec_special(int *vect, int n)
@@ -457,41 +307,6 @@ void init_code(int n)
         enc_fft[x] = field_mult(enc_fft[x],inv[n]);
     }
     prod_enc = (int *) malloc(sizeof(int) * n);
-}
-
-//*********************************************************************
-//*********************************************************************
-
-//void fast_convolution(int *dst, int *src, int n)
-//{
-//    int x,y;
-//
-//    for (x=0; x<n; x++) {
-//        ta[x]=src[x];
-//        ta[n+x]=0;
-//    }
-//
-//    fft(ta,2*n);
-//    for (x=0; x<2*n; x++) {
-//        ta[x] = field_mult(ta[x],inv_fft[x]);
-//    }
-//    ifft(ta,2*n);
-//
-//    for (x=0; x<n; x++) {
-//        dst[x] = ta[x];
-//    }
-//}
-
-void convolution(int *dst, int *src, int n)
-{
-    int x,y;
-    for (x=0; x<n; x++) {
-        int t=0;
-        for (y=0; y<n; y++) {
-            t = (t + field_mult(src[y], inv[(x + GF - y)%GF])) % GF;
-        }
-        dst[x]= t;
-    }
 }
 
 //*********************************************************************
