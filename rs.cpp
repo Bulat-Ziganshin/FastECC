@@ -253,7 +253,7 @@ void (*ifft)(int *, int) = ifft_inc;
 //*********************************************************************
 //*********************************************************************
 
-void compute_prod_old(int *prod, int *pos, int k, int n)
+void compute_prod(int *prod, int *pos, int k, int n)
 {
     int x,i;
     for (x=0; x<n; x++) {
@@ -263,18 +263,6 @@ void compute_prod_old(int *prod, int *pos, int k, int n)
                 t = field_mult(t, field_diff(x,pos[i]));
         }
         prod[x]=t;
-    }
-}
-
-void compute_prod(int *prod, int *pos, int k, int n)
-{
-    int x,i;
-    for (x=0; x<n; x++) {
-        unsigned int t=0;
-        for (i=0; i<k; i++) {
-            t += log[field_diff(x,pos[i])];
-        }
-        prod[x]=exp[t % (1<<16)];
     }
 }
 
