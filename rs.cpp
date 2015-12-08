@@ -68,40 +68,78 @@ double get_KB(int byte)
     return (double)byte/(double)(1<<10);
 }
 
+/***********************************************************************************************************************
+*** GF(P) **************************************************************************************************************
+************************************************************************************************************************/
+
+#include <stdint.h>
+typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
+typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
+
+
+template <typename T, T P>
+ElementT GF_Add (ElementT X, ElementT Y)
+{
+    ElementT res = X + Y;
+    return res - ((res>=P)+(res<X))*P;   // (res>=P || res<X)? res-P : res;
+}
+
+template <typename T, T P>
+ElementT GF_Sub (ElementT X, ElementT Y)
+{
+    ElementT res = X - Y;
+    return res + (res>X)*P;   // res<=X? res : res+P
+}
+
+// GF_Mul64 is optimized for 64-bit CPUs
+template <ElementT P>
+ElementT GF_Mul (ElementT X, ElementT Y)
+{
+    return ElementT( (DoubleElementT(X)*Y) % P);
+}
+
+template <typename T, T P>
+ElementT GF_Pow (T X, size_t N)
+{
+    T res = 1;
+    for ( ; N; N/=2)
+    {
+        if (N&1)  res = GF_Mul<P> (res,X);
+        X = GF_Mul<P> (X,X);
+    }
+    return res;
+}
+
+template <typename T, T P>
+ElementT GF_Inv (T X)
+{
+    return GF_Pow<T,P> (X,P-2);
+}
+
 // *******************************************************
 
 #define GF ((1<<16)+1)
 
 int *log, *exp, *inv;
 
-int inline reduce(unsigned int a)
-{
-    a = (a& ((1<<16)-1)) - (a>>16);
-    a += (((int)a)>>31)&GF;
-    return a;
-}
-
 int inline field_mult(unsigned int a, unsigned int b)
 {
-    if (a==(1<<16)) return -(int)b + (((-(int)b)>>31) & GF);
-    return reduce(a*b);
+    return GF_Mul<GF>(a,b);
 }
 
 int inline field_mult_no(unsigned int a, unsigned int b)
 {
-    return reduce(a*b);
+    return GF_Mul<GF>(a,b);
 }
 
 int inline field_diff(unsigned int a, unsigned int b)
 {
-    a -= b;
-    return a + ((((int)a)>>31)&GF);
+    return GF_Sub<ElementT,GF>(a,b);
 }
 
 int inline field_sum(unsigned int a, unsigned int b)
 {
-    a -= GF-b;
-    return a + ((((int)a)>>31)&GF);
+    return GF_Add<ElementT,GF>(a,b);
 }
 
 
@@ -116,13 +154,13 @@ void init_field()
     for (i=0; i+1<GF; i++) {
         exp[i]=p;
         log[p]=i;
-        p = reduce(3*p);
+        p = GF_Mul<GF>(3,p);
     }
     exp[GF-1]=1;
     log[0]=0;
 
     for (i=0; i<GF; i++) {
-        inv[i]=exp[GF-1-log[i]];
+        inv[i] = GF_Inv<ElementT,GF>(i);
     }
     inv[0]=0;
     inv[1]=1;

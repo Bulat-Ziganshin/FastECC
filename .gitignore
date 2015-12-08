@@ -9,6 +9,7 @@ Descript.ion
 *.asm
 *.lst
 *.exe
+0/*
 1/*
 2/*
 3/*
