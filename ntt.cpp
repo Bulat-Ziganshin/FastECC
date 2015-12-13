@@ -34,20 +34,24 @@ ElementT GF_Sub (ElementT X, ElementT Y)
     return res + (res>X)*P;   // res<=X? res : res+P
 }
 
-#if 0
-// Alternative GF_Mul64 implementation for GCC - unfortunately, GCC 4.9 generates over-smart code for it
+#if __GNUC__
+// Alternative GF_Mul64 implementation for GCC
 
+#include <quadmath.h>
 #include <inttypes.h>
-typedef unsigned __int128 uint128_t;
-typedef uint128_t FourElement;    // 4x wider type to hold intermediate MUL results
+typedef unsigned __int128 FourElement;    // 4x wider type to hold intermediate MUL results
 
 template <ElementT P>
 ElementT GF_Mul64 (ElementT X, ElementT Y)
 {
+    // See chapter "16.9 Division" in the http://www.agner.org/optimize/optimizing_assembly.pdf
+    // static __float128 invPFull = powq(2,95) / P;
+    static DoubleElementT invP = 9225624384409992840ULL;  // roundq(invPFull);
+    static DoubleElementT extra = 1; // (invP<invPFull? 1 : 0);
+    
     DoubleElementT res = DoubleElementT(X)*Y;
-    DoubleElementT invP = DoubleElementT((FourElement(1)<<64) / P);
-    res -= DoubleElementT(((res)*FourElement(invP)) >> 64) * P;
-    return ElementT(res>=P? res-P : res);
+    res -= DoubleElementT(((res+extra)*FourElement(invP)) >> 95) * P;
+    return ElementT(res);
 }
 
 #elif _MSC_VER
@@ -56,8 +60,9 @@ ElementT GF_Mul64 (ElementT X, ElementT Y)
 template <ElementT P>
 ElementT GF_Mul64 (ElementT X, ElementT Y)
 {
-    const DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;
-    const DoubleElementT invP    = (estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);
+    DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;
+    DoubleElementT invP    = (estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);
+
     DoubleElementT res = DoubleElementT(X)*Y;
     res -= __umulh(res,invP) * P;
     return ElementT(res>=P? res-P : res);
@@ -180,20 +185,24 @@ void FindRoot (size_t N)
 }
 
 
-// Test the GF_Mul32 correctness
+// Test the GF_Mul correctness
 template <ElementT P>
-void Test_GF_Mul32()
+void Test_GF_Mul()
 {
     int n = 0;
-    for (ElementT i=0; i<P; i++)
+    for (ElementT i=P-1; i>0; i--)
     {
-        if (i%4096==0)  std::cout << std::hex << "\r0x" << i << "...";
-        for (ElementT j=0; j<i; j++)
-            if (GF_Mul64<P> (i,j)  !=  GF_Mul32<P> (i,j))
+        if (i%0x1000==0)  std::cout << std::hex << "\r0x" << i << "...";
+        for (ElementT j=P-1; j>=i; j--)
+        {
+            auto a = (DoubleElementT(i)*j) % P;
+            auto b = GF_Mul<P> (i,j);
+            if (a != b)
             {
-                std::cout << std::hex << "\r" << i << "*" << j << "=" << GF_Mul64<P> (i,j) << " != " << GF_Mul32<P> (i,j) << "\n" ;
+                std::cout << std::hex << "\r" << i << "*" << j << "=" << a << " != " << b << "\n" ;
                 if (++n>10) return;
             }
+        }
     }
 }
 
@@ -337,7 +346,7 @@ int main()
 {
     const ElementT P = 0xFFF00001;
     // Test_GF_Inv<ElementT,P>();
-    // Test_GF_Mul32<P>();
+    // Test_GF_Mul<P>();
     // FindRoot<ElementT,P>(P-1);  // prints 19
     // if (BenchButterfly<ElementT,P>())  return 0;
 
