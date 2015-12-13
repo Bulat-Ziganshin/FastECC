@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <stdint.h>
+#include <string.h>
 
 #if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
 #define MY_CPU_AMD64
@@ -34,7 +35,7 @@ ElementT GF_Sub (ElementT X, ElementT Y)
     return res + (res>X)*P;   // res<=X? res : res+P
 }
 
-#if __GNUC__
+#if __GNUC__ && defined(MY_CPU_64BIT)
 // Alternative GF_Mul64 implementation for GCC
 
 #include <quadmath.h>
@@ -48,7 +49,7 @@ ElementT GF_Mul64 (ElementT X, ElementT Y)
     // static __float128 invPFull = powq(2,95) / P;
     static DoubleElementT invP = 9225624384409992840ULL;  // roundq(invPFull);
     static DoubleElementT extra = 1; // (invP<invPFull? 1 : 0);
-    
+
     DoubleElementT res = DoubleElementT(X)*Y;
     res -= DoubleElementT(((res+extra)*FourElement(invP)) >> 95) * P;
     return ElementT(res);
@@ -86,6 +87,7 @@ ElementT GF_Mul32 (ElementT X, ElementT Y)
     // invP32 := (2**64)/P - 2**32  :  if 2**31<P<2**32, then 2**32 < (2**64)/P < 2**33, and invP32 is a 32-bit value
     const DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;                          // == invP & (~1)
     const ElementT       invP32  = ElementT(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);    // we can't use 1<<64 for exact invP computation so we add the posible 1 in other way
+
     DoubleElementT res = DoubleElementT(X)*Y;
     res  -=  ((res + (res>>32)*invP32) >> 32) * P;    // The same as res -= ((res*invP) >> 64) * P, where invP = (2**64)/P, but optimized for 32-bit computations
     return ElementT(res>=P? res-P : res);
@@ -342,13 +344,14 @@ void NTT (size_t N, size_t SIZE, T* data)
 
 
 
-int main()
+int main (int argc, char **argv)
 {
     const ElementT P = 0xFFF00001;
-    // Test_GF_Inv<ElementT,P>();
-    // Test_GF_Mul<P>();
-    // FindRoot<ElementT,P>(P-1);  // prints 19
-    // if (BenchButterfly<ElementT,P>())  return 0;
+    char opt  =  (argc==2 && strlen(argv[1])==1?  argv[1][0] : ' ');
+    if (opt=='i')  {Test_GF_Inv<ElementT,P>(); return 0;}
+    if (opt=='m')  {Test_GF_Mul<P>(); return 0;}
+    if (opt=='r')  {FindRoot<ElementT,P>(P-1); return 0;} // prints 19
+    if (opt=='b')  {if (BenchButterfly<ElementT,P>())  return 0;}
 
     const size_t N = 1<<20;   // NTT order
     const size_t SIZE = 128;  // Block size, in 32-bit elements
