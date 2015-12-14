@@ -17,85 +17,98 @@
 *** GF(P) **************************************************************************************************************
 ************************************************************************************************************************/
 
-typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
-typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
+// Twice wider type to hold intermediate MUL results
+template<typename Type> struct Double           {};
+template<>              struct Double<uint32_t> {typedef uint64_t T;};
 
 
 template <typename T, T P>
-ElementT GF_Add (ElementT X, ElementT Y)
+T GF_Add (T X, T Y)
 {
-    ElementT res = X + Y;
+    T res = X + Y;
     return res - ((res>=P)+(res<X))*P;   // (res>=P || res<X)? res-P : res;
 }
 
 template <typename T, T P>
-ElementT GF_Sub (ElementT X, ElementT Y)
+T GF_Sub (T X, T Y)
 {
-    ElementT res = X - Y;
+    T res = X - Y;
     return res + (res>X)*P;   // res<=X? res : res+P
 }
+
 
 #if __GNUC__ && defined(MY_CPU_64BIT)
 // Alternative GF_Mul64 implementation for GCC
 
 #include <inttypes.h>
-typedef unsigned __int128 FourElement;    // 4x wider type to hold intermediate MUL results
+typedef unsigned __int128 uint128_t;
+template<>              struct Double<uint64_t>    {typedef uint128_t T;};
+
+// 4x wider type to hold intermediate MUL results
+template<typename Type> struct Quadruple           {};
+template<>              struct Quadruple<uint32_t> {typedef uint128_t T;};
 
 // The binary logarithm, rounded down
 template <typename T>
 static constexpr int trunc_log2 (T x)
 {return x<=1? 0 : 1+trunc_log2(x/2);}
 
-template <ElementT P>
-ElementT GF_Mul64 (ElementT X, ElementT Y)
+template <typename T, T P>
+T GF_Mul64 (T X, T Y)
 {
-    // See chapter "16.9 Division" in the http://www.agner.org/optimize/optimizing_assembly.pdf
-    constexpr int BITS = trunc_log2(P) + 8*sizeof(DoubleElementT);
-    constexpr FourElement    invP2 = (FourElement(2) << BITS) / P;  // double the invP value
-    constexpr DoubleElementT invP  = (invP2+1) / 2;                 // rounded invP value
-    constexpr DoubleElementT extra = 1 - (invP2 & 1);               // 1 if invP was rounded down, 0 otherwise
+    using DoubleT = typename Double<T>::T;
+    using QuadT   = typename Quadruple<T>::T;
 
-    DoubleElementT res = DoubleElementT(X)*Y;
-    res -= DoubleElementT(((res+extra)*FourElement(invP)) >> BITS) * P;
-    return ElementT(res);
+    // See chapter "16.9 Division" in the http://www.agner.org/optimize/optimizing_assembly.pdf
+    constexpr int BITS = trunc_log2(P) + 8*sizeof(DoubleT);
+    constexpr QuadT   invP2 = (QuadT(2) << BITS) / P;  // double the invP value
+    constexpr DoubleT invP  = (invP2+1) / 2;           // rounded invP value
+    constexpr DoubleT extra = 1 - (invP2 & 1);         // 1 if invP was rounded down, 0 otherwise
+
+    DoubleT res = DoubleT(X)*Y;
+    res -= DoubleT(((res+extra)*QuadT(invP)) >> BITS) * P;
+    return T(res);
 }
 
 #elif _MSC_VER
 // Alternative GF_Mul64 implementation made with MSVC intrinsics
 
-template <ElementT P>
-ElementT GF_Mul64 (ElementT X, ElementT Y)
+template <typename T, T P>
+T GF_Mul64 (T X, T Y)
 {
-    DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;
-    DoubleElementT invP    = (estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);
+    using DoubleT = typename Double<T>::T;
+    DoubleT estInvP = ((DoubleT(1)<<63) / P) << 1;
+    DoubleT invP    = (estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);
 
-    DoubleElementT res = DoubleElementT(X)*Y;
+    DoubleT res = DoubleT(X)*Y;
     res -= __umulh(res,invP) * P;
-    return ElementT(res>=P? res-P : res);
+    return T(res>=P? res-P : res);
 }
 
 #else
 
 // GF_Mul64 is optimized for 64-bit CPUs
-template <ElementT P>
-ElementT GF_Mul64 (ElementT X, ElementT Y)
+template <typename T, T P>
+T GF_Mul64 (T X, T Y)
 {
-    return ElementT( (DoubleElementT(X)*Y) % P);
+    using DoubleT = typename Double<T>::T;
+    return T((DoubleT(X)*Y) % P);
 }
 
 #endif
 
 // GF_Mul32 is optimized for 32-bit CPUs, SIMD and GPUs
-template <ElementT P>
-ElementT GF_Mul32 (ElementT X, ElementT Y)
+template <typename T, T P>
+T GF_Mul32 (T X, T Y)
 {
+    using DoubleT = typename Double<T>::T;
     // invP32 := (2**64)/P - 2**32  :  if 2**31<P<2**32, then 2**32 < (2**64)/P < 2**33, and invP32 is a 32-bit value
-    const DoubleElementT estInvP = ((DoubleElementT(1)<<63) / P) << 1;                          // == invP & (~1)
-    const ElementT       invP32  = ElementT(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);    // we can't use 1<<64 for exact invP computation so we add the posible 1 in other way
+    const DoubleT estInvP = ((DoubleT(1)<<63) / P) << 1;                      // == invP & (~1)
+    const T            invP32  = T(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);     // we can't use 1<<64 for exact invP computation so we add the posible 1 in other way
 
-    DoubleElementT res = DoubleElementT(X)*Y;
+    DoubleT res = DoubleT(X)*Y;
     res  -=  ((res + (res>>32)*invP32) >> 32) * P;    // The same as res -= ((res*invP) >> 64) * P, where invP = (2**64)/P, but optimized for 32-bit computations
-    return ElementT(res>=P? res-P : res);
+    return T(res>=P? res-P : res);
 }
 
 #ifdef MY_CPU_64BIT
@@ -106,22 +119,22 @@ ElementT GF_Mul32 (ElementT X, ElementT Y)
 
 
 template <typename T, T P>
-ElementT GF_Pow (T X, T N)
+T GF_Pow (T X, T N)
 {
     T res = 1;
     for ( ; N; N/=2)
     {
-        if (N&1)  res = GF_Mul<P> (res,X);
-        X = GF_Mul<P> (X,X);
+        if (N&1)  res = GF_Mul<T,P> (res,X);
+        X = GF_Mul<T,P> (X,X);
     }
     return res;
 }
 
 
 template <typename T, T P>
-ElementT GF_Inv (T X)
+T GF_Inv (T X)
 {
-    return GF_Pow<T,P> (X,P-2);
+    return GF_Pow<T,P> (X, P-2);
 }
 
 
@@ -137,7 +150,7 @@ void Test_GF_Inv()
     for (T i=1; i<P; i++)
     {
         if (i%(1<<20)==0)  std::cout << std::hex << "\r0x" << i << "...";
-        if (GF_Mul<P>(i, GF_Inv<T,P>(i)) != 1)
+        if (GF_Mul<T,P>(i, GF_Inv<T,P>(i)) != 1)
         {
             std::cout << i << "\n";
             if (++cnt==10) break;
@@ -193,17 +206,18 @@ void FindRoot (T N)
 
 
 // Test the GF_Mul correctness
-template <ElementT P>
+template <typename T, T P>
 void Test_GF_Mul()
 {
     int n = 0;
-    for (ElementT i=P-1; i>0; i--)
+    for (T i=P-1; i>0; i--)
     {
         if (i%0x1000==0)  std::cout << std::hex << "\r0x" << i << "...";
-        for (ElementT j=P-1; j>=i; j--)
+        for (T j=P-1; j>=i; j--)
         {
-            auto a = (DoubleElementT(i)*j) % P;
-            auto b = GF_Mul<P> (i,j);
+            using DoubleT = typename Double<T>::T;
+            auto a = (DoubleT(i)*j) % P;
+            auto b = GF_Mul<T,P> (i,j);
             if (a != b)
             {
                 std::cout << std::hex << "\r" << i << "*" << j << "=" << a << " != " << b << "\n" ;
@@ -220,7 +234,7 @@ void Butterfly (T* a, T* b, int TIMES, int SIZE, T root)
 {
     for (int n=0; n<TIMES; n++) {
         for (int k=0; k<SIZE; k++) {                     // cycle over SIZE elements of the single block
-            T temp = GF_Mul<P> (root, b[k]);
+            T temp = GF_Mul<T,P> (root, b[k]);
             b[k] = GF_Sub<T,P> (a[k], temp);
             a[k] = GF_Add<T,P> (a[k], temp);
         }
@@ -232,15 +246,15 @@ void Butterfly (T* a, T* b, int TIMES, int SIZE, T root)
 template <typename T, T P>
 int BenchButterfly()
 {
-    ElementT x=0;
+    T x=0;
     #pragma omp parallel for
     for (int n=0; n<8; n++)
     {
         const int sz = 1280;
-        ElementT a[sz], b[sz];
+        T a[sz], b[sz];
         for (int i=0; i<sz; i++)
             a[i] = i*7+1, b[i] = i*15+8;
-        Butterfly<ElementT,P> (a, b, 128*1024, sz, 1557);
+        Butterfly<T,P> (a, b, 128*1024, sz, 1557);
         x += a[0];
     }
     return x?1:0;
@@ -274,11 +288,11 @@ void RecursiveNTT (T* data, size_t FirstN, size_t N, size_t TOTAL, size_t SIZE, 
     for (size_t i=0; i<N*SIZE; i+=SIZE) {
         for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
             size_t i1 = i+k, i2 = i+k+N*SIZE;
-            T temp   = GF_Mul<P> (root_i, data[i2]);
+            T temp   = GF_Mul<T,P> (root_i, data[i2]);
             data[i2] = GF_Sub<T,P> (data[i1], temp);
             data[i1] = GF_Add<T,P> (data[i1], temp);
         }
-        root_i = GF_Mul<P> (root_i, root);              // next root of power 2N of 1
+        root_i = GF_Mul<T,P> (root_i, root);              // next root of power 2N of 1
     }
 }
 
@@ -306,11 +320,11 @@ void IterativeNTT (T* data, size_t FirstN, size_t LastN, size_t TOTAL, size_t SI
             for (size_t i=0; i<N*SIZE; i+=SIZE) {
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
                     size_t i1 = x+i+k, i2 = x+i+k+N*SIZE;
-                    T temp   = GF_Mul<P> (root_i, data[i2]);
+                    T temp   = GF_Mul<T,P> (root_i, data[i2]);
                     data[i2] = GF_Sub<T,P> (data[i1], temp);
                     data[i1] = GF_Add<T,P> (data[i1], temp);
                 }
-                root_i = GF_Mul<P> (root_i, root);              // next root of power 2N of 1
+                root_i = GF_Mul<T,P> (root_i, root);              // next root of power 2N of 1
             }
         }
     }
@@ -323,11 +337,11 @@ void NTT (size_t N, size_t SIZE, T* data)
 {
     T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
     for (size_t i=1<<20; i>N; i/=2)
-        root = GF_Mul<P> (root, root);  // find root of 1 of power N
+        root = GF_Mul<T,P> (root, root);  // find root of 1 of power N
     T roots[33], *root_ptr = roots;
     while (root!=1)
         *root_ptr++ = root,
-        root = GF_Mul<P> (root, root);
+        root = GF_Mul<T,P> (root, root);
 
     #pragma omp parallel
     {
@@ -351,20 +365,21 @@ void NTT (size_t N, size_t SIZE, T* data)
 
 int main (int argc, char **argv)
 {
-    const ElementT P = 0xFFF00001;
+    typedef uint32_t T;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
+    const T P = 0xFFF00001;
     char opt  =  (argc==2 && strlen(argv[1])==1?  argv[1][0] : ' ');
-    if (opt=='i')  {Test_GF_Inv<ElementT,P>(); return 0;}
-    if (opt=='m')  {Test_GF_Mul<P>(); return 0;}
-    if (opt=='r')  {FindRoot<ElementT,P>(P-1); return 0;} // prints 19
-    if (opt=='b')  {if (BenchButterfly<ElementT,P>())  return 0;}
+    if (opt=='i')  {Test_GF_Inv<T,P>(); return 0;}
+    if (opt=='m')  {Test_GF_Mul<T,P>(); return 0;}
+    if (opt=='r')  {FindRoot<T,P>(P-1); return 0;} // prints 19
+    if (opt=='b')  {if (BenchButterfly<T,P>())  return 0;}
 
     const size_t N = 1<<20;   // NTT order
     const size_t SIZE = 128;  // Block size, in 32-bit elements
-    ElementT *data = new ElementT[N*SIZE];  // 512 MB
+    T *data = new T[N*SIZE];  // 512 MB
     for (int i=0; i<N*SIZE; i++)
         data[i] = i;
 
-    NTT<ElementT,P> (N, SIZE, data);
+    NTT<T,P> (N, SIZE, data);
 
     uint32_t sum = 314159253;
     for (int i=0; i<N*SIZE; i++)
