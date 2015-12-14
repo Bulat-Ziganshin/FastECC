@@ -59,7 +59,7 @@ T GF_Mul64 (T X, T Y)
     using QuadT   = typename Quadruple<T>::T;
 
     // See chapter "16.9 Division" in the http://www.agner.org/optimize/optimizing_assembly.pdf
-    constexpr int BITS = trunc_log2(P) + 8*sizeof(DoubleT);
+    constexpr int     BITS  = trunc_log2(P) + 8*sizeof(DoubleT);
     constexpr QuadT   invP2 = (QuadT(2) << BITS) / P;  // double the invP value
     constexpr DoubleT invP  = (invP2+1) / 2;           // rounded invP value
     constexpr DoubleT extra = 1 - (invP2 & 1);         // 1 if invP was rounded down, 0 otherwise
@@ -103,7 +103,7 @@ T GF_Mul32 (T X, T Y)
     using DoubleT = typename Double<T>::T;
     // invP32 := (2**64)/P - 2**32  :  if 2**31<P<2**32, then 2**32 < (2**64)/P < 2**33, and invP32 is a 32-bit value
     const DoubleT estInvP = ((DoubleT(1)<<63) / P) << 1;                      // == invP & (~1)
-    const T            invP32  = T(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);     // we can't use 1<<64 for exact invP computation so we add the posible 1 in other way
+    const T       invP32  = T(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);     // we can't use 1<<64 for exact invP computation so we add the posible 1 in other way
 
     DoubleT res = DoubleT(X)*Y;
     res  -=  ((res + (res>>32)*invP32) >> 32) * P;    // The same as res -= ((res*invP) >> 64) * P, where invP = (2**64)/P, but optimized for 32-bit computations
@@ -113,7 +113,7 @@ T GF_Mul32 (T X, T Y)
 #ifdef MY_CPU_64BIT
 #define GF_Mul GF_Mul64
 #else
-#define GF_Mul GF_Mul64
+#define GF_Mul GF_Mul32
 #endif
 
 
