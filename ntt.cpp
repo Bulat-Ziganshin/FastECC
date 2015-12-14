@@ -23,22 +23,21 @@ template<>              struct Double<uint32_t> {typedef uint64_t T;};
 
 
 template <typename T, T P>
-T GF_Add (T X, T Y)
-{
-    T res = X + Y;
-    return res - ((res>=P)+(res<X))*P;   // (res>=P || res<X)? res-P : res;
-}
-
-template <typename T, T P>
 T GF_Sub (T X, T Y)
 {
     T res = X - Y;
     return res + (res>X)*P;   // res<=X? res : res+P
 }
 
+template <typename T, T P>
+T GF_Add (T X, T Y)
+{
+    return GF_Sub<T,P> (X, P-Y);
+}
+
 
 #if __GNUC__ && defined(MY_CPU_64BIT)
-// Alternative GF_Mul64 implementation for GCC
+// Alternative GF_Mul64 implementation for 64-bit GCC
 
 #include <inttypes.h>
 typedef unsigned __int128 uint128_t;
@@ -70,7 +69,7 @@ T GF_Mul64 (T X, T Y)
     return T(res);
 }
 
-#elif _MSC_VER
+#elif _MSC_VER && defined(MY_CPU_64BIT)
 // Alternative GF_Mul64 implementation made with MSVC intrinsics
 
 template <typename T, T P>
@@ -114,7 +113,7 @@ T GF_Mul32 (T X, T Y)
 #ifdef MY_CPU_64BIT
 #define GF_Mul GF_Mul64
 #else
-#define GF_Mul GF_Mul32
+#define GF_Mul GF_Mul64
 #endif
 
 
