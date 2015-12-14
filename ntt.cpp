@@ -41,16 +41,22 @@ ElementT GF_Sub (ElementT X, ElementT Y)
 #include <inttypes.h>
 typedef unsigned __int128 FourElement;    // 4x wider type to hold intermediate MUL results
 
+// The binary logarithm, rounded down
+template <typename T>
+static constexpr int trunc_log2 (T x)
+{return x<=1? 0 : 1+trunc_log2(x/2);}
+
 template <ElementT P>
 ElementT GF_Mul64 (ElementT X, ElementT Y)
 {
     // See chapter "16.9 Division" in the http://www.agner.org/optimize/optimizing_assembly.pdf
-    int BITS = 95;  // for P in 2^31..2^32, in general bits(DoubleElementT) + rounded_down_logb(P)
-    DoubleElementT extra = ((FourElement(2) << BITS) / P) & 1;    // 0;
-    DoubleElementT invP  =  (FourElement(1) << BITS) / P + extra; // 9225624384409992840ULL;
+    constexpr int BITS = trunc_log2(P) + 8*sizeof(DoubleElementT);
+    constexpr FourElement    invP2 = (FourElement(2) << BITS) / P;  // double the invP value
+    constexpr DoubleElementT invP  = (invP2+1) / 2;                 // rounded invP value
+    constexpr DoubleElementT extra = 1 - (invP2 & 1);               // 1 if invP was rounded down, 0 otherwise
 
     DoubleElementT res = DoubleElementT(X)*Y;
-    res -= DoubleElementT(((res+1-extra)*FourElement(invP)) >> BITS) * P;
+    res -= DoubleElementT(((res+extra)*FourElement(invP)) >> BITS) * P;
     return ElementT(res);
 }
 
