@@ -38,7 +38,6 @@ ElementT GF_Sub (ElementT X, ElementT Y)
 #if __GNUC__ && defined(MY_CPU_64BIT)
 // Alternative GF_Mul64 implementation for GCC
 
-#include <quadmath.h>
 #include <inttypes.h>
 typedef unsigned __int128 FourElement;    // 4x wider type to hold intermediate MUL results
 
@@ -46,12 +45,12 @@ template <ElementT P>
 ElementT GF_Mul64 (ElementT X, ElementT Y)
 {
     // See chapter "16.9 Division" in the http://www.agner.org/optimize/optimizing_assembly.pdf
-    // static __float128 invPFull = powq(2,95) / P;
-    static DoubleElementT invP = 9225624384409992840ULL;  // roundq(invPFull);
-    static DoubleElementT extra = 1; // (invP<invPFull? 1 : 0);
+    int BITS = 95;  // for P in 2^31..2^32, in general bits(DoubleElementT) + rounded_down_logb(P)
+    DoubleElementT extra = ((FourElement(2) << BITS) / P) & 1;    // 0;
+    DoubleElementT invP  =  (FourElement(1) << BITS) / P + extra; // 9225624384409992840ULL;
 
     DoubleElementT res = DoubleElementT(X)*Y;
-    res -= DoubleElementT(((res+extra)*FourElement(invP)) >> 95) * P;
+    res -= DoubleElementT(((res+1-extra)*FourElement(invP)) >> BITS) * P;
     return ElementT(res);
 }
 
@@ -101,7 +100,7 @@ ElementT GF_Mul32 (ElementT X, ElementT Y)
 
 
 template <typename T, T P>
-ElementT GF_Pow (T X, size_t N)
+ElementT GF_Pow (T X, T N)
 {
     T res = 1;
     for ( ; N; N/=2)
@@ -143,7 +142,7 @@ void Test_GF_Inv()
 
 // Find first root of 1 of power N
 template <typename T, T P>
-void FindRoot (size_t N)
+void FindRoot (T N)
 {
     int cnt = 0;
     for (T i=2; i<P; i++)
