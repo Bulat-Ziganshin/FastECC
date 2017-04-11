@@ -71,6 +71,7 @@ T GF_Mul64 (T X, T Y)
 
 #elif _MSC_VER && defined(MY_CPU_64BIT)
 // Alternative GF_Mul64 implementation made with MSVC intrinsics
+#include <intrin.h>
 
 template <typename T, T P>
 T GF_Mul64 (T X, T Y)
@@ -102,8 +103,8 @@ T GF_Mul32 (T X, T Y)
 {
     using DoubleT = typename Double<T>::T;
     // invP32 := (2**64)/P - 2**32  :  if 2**31<P<2**32, then 2**32 < (2**64)/P < 2**33, and invP32 is a 32-bit value
-    const DoubleT estInvP = ((DoubleT(1)<<63) / P) << 1;                      // == invP & (~1)
-    const T       invP32  = T(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);     // we can't use 1<<64 for exact invP computation so we add the posible 1 in other way
+    const DoubleT estInvP = ((DoubleT(1)<<63) / P) << 1;                        // == invP & (~1)
+    const T       invP32  = T(estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);  // we can't use 1<<64 for exact invP computation so we add the posible 1 in other way
 
     DoubleT res = DoubleT(X)*Y;
     res  -=  ((res + (res>>32)*invP32) >> 32) * P;    // The same as res -= ((res*invP) >> 64) * P, where invP = (2**64)/P, but optimized for 32-bit computations
