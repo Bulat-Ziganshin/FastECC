@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <stdint.h>
 #include <string.h>
+#include <cassert>
 
 #if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
 #define MY_CPU_AMD64
@@ -361,6 +362,67 @@ void NTT (size_t N, size_t SIZE, T* data)
     }
 }
 
+template <typename T, T P>
+void MFA_NTT (size_t N, size_t SIZE, T* data)
+{
+    T root = 1557;                        // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
+    for (size_t i=1<<20; i>N; i/=2)
+        root = GF_Mul<T,P> (root, root);  // find root of 1 of power N
+    T roots[33], *root_ptr = roots;
+    while (root!=1)
+        *root_ptr++ = root,
+        root = GF_Mul<T,P> (root, root);
+
+    #pragma omp parallel
+    {
+        const size_t R = 1024, C = N/R;
+        
+        // 1. Apply a (length R) FFT on each column
+        #pragma omp for
+        for (int64_t i=0; i<N*SIZE; i+=R*SIZE)
+            IterativeNTT<T,P> (data+i, 1, R, R*SIZE, SIZE, root_ptr);   // PROCESS COLUMN, NOT ROW!!!
+
+        // 2. Multiply each matrix element (index r,c) by *roots ** (r*c)
+        T root_r = *roots,  root_arr[R];        
+        for (size_t r=1; r<R; r++) {
+            root_arr[r] = root_r;
+            root_r = GF_Mul<T,P> (root_r, *roots);              // next root of power N
+        }
+
+        #pragma omp for
+        for (int r=1; r<R; r++) {
+            T root_r = root_arr[r];
+            for (size_t c=1; c<C; c++) {
+                T root_c = root_r;
+                T* sector = data + (r*C+c)*SIZE;
+                for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
+                    sector[k] = GF_Mul<T,P> (sector[k], root_c);
+                }
+                root_c = GF_Mul<T,P> (root_c, root_r);          // next root of power N/R
+            }
+        }
+        
+        // 3. Apply a (length C) FFT on each row
+        #pragma omp for
+        for (int64_t i=0; i<N*SIZE; i+=C*SIZE)
+            IterativeNTT<T,P> (data+i, 1, C, C*SIZE, SIZE, root_ptr);
+
+        // 4. Transpose the matrix
+        assert(R==C);  // traspose algo doesn't support R!=C
+        #pragma omp for
+        for (int r=0; r<R; r++) {
+            for (size_t c=0; c<r; c++) {
+                T* sector1 = data + (r*C+c)*SIZE;
+                T* sector2 = data + (c*R+r)*SIZE;
+                for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
+                    T tmp = sector1[k];
+                    sector1[k] = sector2[k];
+                    sector2[k] = tmp;
+                }
+            }
+        }
+    }
+}
 
 
 int main (int argc, char **argv)
@@ -379,7 +441,8 @@ int main (int argc, char **argv)
     for (int i=0; i<N*SIZE; i++)
         data[i] = i;
 
-    NTT<T,P> (N, SIZE, data);
+//    NTT<T,P> (N, SIZE, data);
+    MFA_NTT<T,P> (N, SIZE, data);
 
     uint32_t sum = 314159253;
     for (int i=0; i<N*SIZE; i++)
