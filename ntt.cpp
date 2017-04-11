@@ -302,23 +302,20 @@ void RecursiveNTT (T* data, size_t FirstN, size_t N, size_t TOTAL, size_t SIZE, 
 template <typename T, T P>
 void IterativeNTT (T* data, size_t FirstN, size_t LastN, size_t TOTAL, size_t SIZE, T* root_ptr)
 {
-    if (FirstN == 1) {
-        FirstN = 2;  --root_ptr;
-        for (size_t x=0; x<TOTAL; x+=2*SIZE) {
-            for (size_t k=0; k<SIZE; k++) {                     // cycle over SIZE elements of the single block
-                size_t i1 = x+k, i2 = x+k+SIZE;
-                T temp   = data[i2];                            // here we use only root**0==1
-                data[i2] = GF_Sub<T,P> (data[i1], temp);
-                data[i1] = GF_Add<T,P> (data[i1], temp);
-            }
-        }
-    }
-
     for (size_t N=FirstN; N<LastN; N*=2) {
         T root = *--root_ptr;
         for (size_t x=0; x<TOTAL; x+=2*N*SIZE) {
-            T root_i = 1;                                       // zeroth power of the root of power 2N of 1
-            for (size_t i=0; i<N*SIZE; i+=SIZE) {
+            
+            for (size_t k=0; k<SIZE; k++) {                     // cycle over SIZE elements of the single block
+                size_t i1 = x+k, i2 = x+k+N*SIZE;
+                T temp   = data[i2];                            // here we use root**0==1
+                data[i2] = GF_Sub<T,P> (data[i1], temp);
+                data[i1] = GF_Add<T,P> (data[i1], temp);
+            }
+
+            T root_i = root;                                    // first root of power 2N of 1
+
+            for (size_t i=SIZE; i<N*SIZE; i+=SIZE) {
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
                     size_t i1 = x+i+k, i2 = x+i+k+N*SIZE;
                     T temp   = GF_Mul<T,P> (root_i, data[i2]);
@@ -362,6 +359,8 @@ void NTT (size_t N, size_t SIZE, T* data)
     }
 }
 
+
+// The matrix Fourier algorithm (MFA)
 template <typename T, T P>
 void MFA_NTT (size_t N, size_t SIZE, T* data)
 {
@@ -408,7 +407,7 @@ void MFA_NTT (size_t N, size_t SIZE, T* data)
             IterativeNTT<T,P> (data+i, 1, C, C*SIZE, SIZE, root_ptr);
 
         // 4. Transpose the matrix
-        assert(R==C);  // traspose algo doesn't support R!=C
+        assert(R==C);  // transpose algo doesn't support R!=C
         #pragma omp for
         for (int r=0; r<R; r++) {
             for (size_t c=0; c<r; c++) {
@@ -433,7 +432,7 @@ int main (int argc, char **argv)
     if (opt=='i')  {Test_GF_Inv<T,P>(); return 0;}
     if (opt=='m')  {Test_GF_Mul<T,P>(); return 0;}
     if (opt=='r')  {FindRoot<T,P>(P-1); return 0;} // prints 19
-    if (opt=='b')  {if (BenchButterfly<T,P>())  return 0;}
+    if (opt=='b')  {BenchButterfly<T,P>();  return 0;}
 
     const size_t N = 1<<20;   // NTT order
     const size_t SIZE = 128;  // Block size, in 32-bit elements
@@ -441,8 +440,9 @@ int main (int argc, char **argv)
     for (int i=0; i<N*SIZE; i++)
         data[i] = i;
 
-//    NTT<T,P> (N, SIZE, data);
-    MFA_NTT<T,P> (N, SIZE, data);
+    if (opt=='n')  
+         MFA_NTT<T,P> (N, SIZE, data);
+    else NTT<T,P> (N, SIZE, data);    
 
     uint32_t sum = 314159253;
     for (int i=0; i<N*SIZE; i++)
