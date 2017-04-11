@@ -285,7 +285,7 @@ void RecursiveNTT (T* data, size_t FirstN, size_t N, size_t TOTAL, size_t SIZE, 
 #endif
     }
 
-    T root = *roots,   root_i = root;                   // first root of power 2N of 1
+    T root = *roots,   root_i = 1;                      // zeroth root of power 2N of 1
     for (size_t i=0; i<N*SIZE; i+=SIZE) {
         for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
             size_t i1 = i+k, i2 = i+k+N*SIZE;
@@ -447,7 +447,7 @@ int main (int argc, char **argv)
     uint32_t sum = 314159253;
     for (int i=0; i<N*SIZE; i++)
         sum = (sum+data[i])*123456791;
-    if (sum != 562770418UL)
+    if (sum != 788436454UL)
         printf("checksum failed: %.0lf", double(sum));
 
     return 0;
