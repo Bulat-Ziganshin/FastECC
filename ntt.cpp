@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <cassert>
+#include <algorithm> 
+#include <utility>
 
 #if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
 #define MY_CPU_AMD64
@@ -266,6 +268,31 @@ int BenchButterfly()
 *** Number-Theoretical Transform in GF(P) ******************************************************************************
 ************************************************************************************************************************/
 
+/* re-order data */
+template <typename T, T P>
+void revbin_permute (T* data, size_t n, size_t SIZE)
+{
+    if (n<=2)  return;
+    size_t mr = 0; // the reversed 0
+    for (size_t m=1; m<n; ++m) {
+        // revbin_upd(r,n)
+        size_t l = n;
+        do {
+        	l >>= 1;
+        } while (mr+l >= n);
+        mr = (mr & (l-1)) + l;
+
+        if (mr > m) {
+            T* block1 = data + m*SIZE;
+            T* block2 = data + mr*SIZE;
+            for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
+                std::swap (block1[k], block2[k]);
+            }
+        }
+    }
+}    
+
+
 // Recursive NTT implementation
 template <typename T, T P>
 void RecursiveNTT (T* data, size_t FirstN, size_t N, size_t TOTAL, size_t SIZE, T* roots)
@@ -341,6 +368,8 @@ void NTT (size_t N, size_t SIZE, T* data)
         *root_ptr++ = root,
         root = GF_Mul<T,P> (root, root);
 
+    revbin_permute<T,P> (data, N, SIZE);
+
     #pragma omp parallel
     {
         // Smaller N values up to S are processed iteratively
@@ -393,9 +422,9 @@ void MFA_NTT (size_t N, size_t SIZE, T* data)
             T root_r = root_arr[r];
             for (size_t c=1; c<C; c++) {
                 T root_c = root_r;
-                T* sector = data + (r*C+c)*SIZE;
+                T* block = data + (r*C+c)*SIZE;
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
-                    sector[k] = GF_Mul<T,P> (sector[k], root_c);
+                    block[k] = GF_Mul<T,P> (block[k], root_c);
                 }
                 root_c = GF_Mul<T,P> (root_c, root_r);          // next root of power N/R
             }
@@ -411,12 +440,10 @@ void MFA_NTT (size_t N, size_t SIZE, T* data)
         #pragma omp for
         for (int r=0; r<R; r++) {
             for (size_t c=0; c<r; c++) {
-                T* sector1 = data + (r*C+c)*SIZE;
-                T* sector2 = data + (c*R+r)*SIZE;
+                T* block1 = data + (r*C+c)*SIZE;
+                T* block2 = data + (c*R+r)*SIZE;
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
-                    T tmp = sector1[k];
-                    sector1[k] = sector2[k];
-                    sector2[k] = tmp;
+                    std::swap (block1[k], block2[k]);
                 }
             }
         }
@@ -447,7 +474,7 @@ int main (int argc, char **argv)
     uint32_t sum = 314159253;
     for (int i=0; i<N*SIZE; i++)
         sum = (sum+data[i])*123456791;
-    if (sum != 788436454UL)
+    if (sum != 3677140454UL)
         printf("checksum failed: %.0lf", double(sum));
 
     return 0;
