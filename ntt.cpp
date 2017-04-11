@@ -307,9 +307,9 @@ void IterativeNTT (T* data, size_t FirstN, size_t LastN, size_t TOTAL, size_t SI
         for (size_t x=0; x<TOTAL; x+=2*SIZE) {
             for (size_t k=0; k<SIZE; k++) {                     // cycle over SIZE elements of the single block
                 size_t i1 = x+k, i2 = x+k+SIZE;
-                T temp   = data[i2];   // root of power 2 is always -1, so we just exchange GF_Add and GF_Sub
-                data[i2] = GF_Add<T,P> (data[i1], temp);
-                data[i1] = GF_Sub<T,P> (data[i1], temp);
+                T temp   = data[i2];                            // here we use only root**0==1
+                data[i2] = GF_Sub<T,P> (data[i1], temp);
+                data[i1] = GF_Add<T,P> (data[i1], temp);
             }
         }
     }
@@ -317,7 +317,7 @@ void IterativeNTT (T* data, size_t FirstN, size_t LastN, size_t TOTAL, size_t SI
     for (size_t N=FirstN; N<LastN; N*=2) {
         T root = *--root_ptr;
         for (size_t x=0; x<TOTAL; x+=2*N*SIZE) {
-            T root_i = root;                                    // first root of power 2N of 1
+            T root_i = 1;                                       // zeroth power of the root of power 2N of 1
             for (size_t i=0; i<N*SIZE; i+=SIZE) {
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
                     size_t i1 = x+i+k, i2 = x+i+k+N*SIZE;
@@ -325,7 +325,7 @@ void IterativeNTT (T* data, size_t FirstN, size_t LastN, size_t TOTAL, size_t SI
                     data[i2] = GF_Sub<T,P> (data[i1], temp);
                     data[i1] = GF_Add<T,P> (data[i1], temp);
                 }
-                root_i = GF_Mul<T,P> (root_i, root);              // next root of power 2N of 1
+                root_i = GF_Mul<T,P> (root_i, root);            // next root of power 2N of 1
             }
         }
     }
@@ -447,7 +447,7 @@ int main (int argc, char **argv)
     uint32_t sum = 314159253;
     for (int i=0; i<N*SIZE; i++)
         sum = (sum+data[i])*123456791;
-    if (sum != 3267607014UL)
+    if (sum != 562770418UL)
         printf("checksum failed: %.0lf", double(sum));
 
     return 0;
