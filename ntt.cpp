@@ -286,11 +286,7 @@ void revbin_permute (T** data, size_t n, size_t SIZE)
         mr = (mr & (l-1)) + l;
 
         if (mr > m) {
-            T* block1 = data[m];
-            T* block2 = data[mr];
-            for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
-                std::swap (block1[k], block2[k]);
-            }
+            std::swap (data[m], data[mr]);
         }
     }
 }
@@ -368,13 +364,17 @@ void IterativeNTT_Steps (T** data, size_t FirstN, size_t LastN, size_t SIZE, T* 
 template <typename T, T P>
 void NTT (size_t N, size_t SIZE, T** data)
 {
-    T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
+    // Find root of 1 of power N
+    T root = 1557;  assert (P==0xFFF00001);     // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
     for (size_t i=1<<20; i>N; i/=2)
-        root = GF_Mul<T,P> (root, root);  // find root of 1 of power N
-    T roots[33], *root_ptr = roots;
-    while (root!=1)
-        *root_ptr++ = root,
         root = GF_Mul<T,P> (root, root);
+
+    // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
+    T roots[33], *root_ptr = roots;
+    while (root != 1) {
+        *root_ptr++ = root;
+        root = GF_Mul<T,P> (root, root);
+    }
 
     revbin_permute<T,P> (data, N, SIZE);
 
@@ -461,16 +461,12 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
         for (int64_t i=0; i<N; i+=C)
             IterativeNTT<T,P> (data+i, C, SIZE, root_ptr);
 
-        // 4. Transpose the matrix
+        // 4. Transpose the matrix by transposing block pointers in the data[]
         assert(R==C);  // transpose algo doesn't support R!=C
         #pragma omp for
         for (int r=0; r<R; r++) {
             for (size_t c=0; c<r; c++) {
-                T* block1 = data[r*C+c];
-                T* block2 = data[c*R+r];
-                for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
-                    std::swap (block1[k], block2[k]);
-                }
+                std::swap (data[r*C+c], data[c*R+r]);
             }
         }
     }
@@ -493,7 +489,7 @@ void time_it (const char* name, std::function<void()> Code)
 int main (int argc, char **argv)
 {
     typedef uint32_t T;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
-    const T P = 0xFFF00001;
+    static const T P = 0xFFF00001;
     char opt  =  (argc==2 && strlen(argv[1])==1?  argv[1][0] : ' ');
     if (opt=='i')  {Test_GF_Inv<T,P>(); return 0;}
     if (opt=='m')  {Test_GF_Mul<T,P>(); return 0;}
