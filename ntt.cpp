@@ -18,6 +18,10 @@
 #define MY_CPU_64BIT
 #endif
 
+#ifndef __GNUC__
+#define __restrict__
+#endif
+
 
 /***********************************************************************************************************************
 *** GF(P) **************************************************************************************************************
@@ -313,8 +317,8 @@ void RecursiveNTT_Steps (T** data, size_t FirstN, size_t N, size_t SIZE, T* root
 
     T root = *roots,   root_i = 1;                      // zeroth root of power 2N of 1
     for (size_t i=0; i<N; i++) {
-        T* block1 = data[i];
-        T* block2 = data[i+N];
+        T* __restrict__ block1 = data[i];
+        T* __restrict__ block2 = data[i+N];
         for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
             T temp    = GF_Mul<T,P> (block2[k], root_i);
             block2[k] = GF_Sub<T,P> (block1[k], temp);
@@ -335,8 +339,8 @@ void IterativeNTT_Steps (T** data, size_t FirstN, size_t LastN, size_t SIZE, T* 
         for (size_t x=0; x<LastN; x+=2*N)
         {
             // first cycle optimized for root_i==1
-            T* block1 = data[x];
-            T* block2 = data[x+N];
+            T* __restrict__ block1 = data[x];
+            T* __restrict__ block2 = data[x+N];
             for (size_t k=0; k<SIZE; k++) {                     // cycle over SIZE elements of the single block
                 T temp    = block2[k];                          // optimized for root_i==1
                 block2[k] = GF_Sub<T,P> (block1[k], temp);
@@ -346,8 +350,8 @@ void IterativeNTT_Steps (T** data, size_t FirstN, size_t LastN, size_t SIZE, T* 
             // remaining cycles with root_i!=1
             T root_i = root;                                    // first root of power 2N of 1
             for (size_t i=1; i<N; i++) {
-                T* block1 = data[x+i];
-                T* block2 = data[x+i+N];
+                T* __restrict__ block1 = data[x+i];
+                T* __restrict__ block2 = data[x+i+N];
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
                     T temp    = GF_Mul<T,P> (block2[k], root_i);
                     block2[k] = GF_Sub<T,P> (block1[k], temp);
@@ -473,7 +477,7 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
 }
 
 
-void time_it (const char* name, std::function<void()> Code)
+void time_it (int64_t size, const char* name, std::function<void()> Code)
 {
     StartTimer();
     double start = GetTimer(), KernelTime[2], UserTime[2];
@@ -482,7 +486,10 @@ void time_it (const char* name, std::function<void()> Code)
     GetProcessKernelUserTimes (KernelTime+1, UserTime+1);
     double wall_time = GetTimer()-start;
     double cpu_time  = (UserTime[1] - UserTime[0]) * 1000;
-    printf("%s: %.0lf ms,  cpu %.0lf ms = %.0lf%%,  os %.0lf ms\n", name, wall_time, cpu_time, cpu_time/wall_time*100, (KernelTime[1]-KernelTime[0])*1000);
+    printf("%s: %.0lf ms = %.0lf MiB/s,  cpu %.0lf ms = %.0lf%%,  os %.0lf ms\n",
+        name, wall_time, (size / wall_time)*1000 / (1<<20),
+        cpu_time, cpu_time/wall_time*100,
+        (KernelTime[1]-KernelTime[0])*1000);
 }
 
 
@@ -494,7 +501,7 @@ int main (int argc, char **argv)
     if (opt=='i')  {Test_GF_Inv<T,P>(); return 0;}
     if (opt=='m')  {Test_GF_Mul<T,P>(); return 0;}
     if (opt=='r')  {FindRoot<T,P>(P-1); return 0;} // prints 19
-    if (opt=='b')  {time_it ("Butterfly", [&]{BenchButterfly<T,P>();});  return 0;}
+    if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return 0;}
 
     const size_t N = 1<<20;     // NTT order
     const size_t SIZE = 128;    // Block size, in 32-bit elements
@@ -507,8 +514,8 @@ int main (int argc, char **argv)
         data[i] = data0 + i*SIZE;
 
     if (opt=='n')
-         time_it ("MFA_NTT", [&]{MFA_NTT<T,P> (N, SIZE, data);});
-    else time_it ("NTT",     [&]{NTT<T,P> (N, SIZE, data);});
+         time_it (N*SIZE*sizeof(T), "MFA_NTT", [&]{MFA_NTT<T,P> (N, SIZE, data);});
+    else time_it (N*SIZE*sizeof(T), "NTT",     [&]{NTT<T,P> (N, SIZE, data);});
 
     uint32_t sum = 314159253;
     for (size_t i=0; i<N; i++)
