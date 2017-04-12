@@ -415,7 +415,7 @@ template <typename T>
 void TransposeMatrix (size_t R, size_t C, T* data)
 {
     assert(R==C);  // transpose algo doesn't support R!=C
-    #pragma omp for
+    #pragma omp single
     for (int r=0; r<R; r++) {
         for (size_t c=0; c<r; c++) {
             std::swap (data[r*C+c], data[c*R+r]);
@@ -513,8 +513,8 @@ int main (int argc, char **argv)
     if (opt=='r')  {FindRoot<T,P>(P-1); return 0;} // prints 19
     if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return 0;}
 
-    const size_t N = 1<<20;     // NTT order
-    const size_t SIZE = 128;    // Block size, in 32-bit elements
+    const size_t N = 1<<18;     // NTT order
+    const size_t SIZE = 512;    // Block size, in 32-bit elements
     T *data0 = new T[N*SIZE];   // 512 MB
     for (size_t i=0; i<N*SIZE; i++)
         data0[i] = i;
@@ -531,7 +531,7 @@ int main (int argc, char **argv)
     for (size_t i=0; i<N; i++)
         for (size_t k=0; k<SIZE; k++)
             sum = (sum+data[i][k])*123456791;
-    if (sum != 3677140454UL)
+    if (sum != 3528284390UL)
         printf("checksum failed: %.0lf", double(sum));
 
     return 0;
