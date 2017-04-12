@@ -248,6 +248,7 @@ void DividersDensity()
 
     if (P == 0xFFF00001)
     {
+        // fast algo manually optimized for 0xFFF00001
         for (T i=1; i<=9; i*=3)
         for (T k=1; k<=5; k*=5)
         for (T l=1; l<=7; l*=7)
@@ -263,14 +264,20 @@ void DividersDensity()
                 a[i] = true;
     }
 
-    T count = 0;  double prod = 1,  last = 1;
-    for (T i=0; i<P; i++)
+    // Compute dividers count & density
+    T count = 0;  double prod = 1,  last = 0;
+    T low = 1,  high = P;
+    for (T i=low; i<high; i++)
         if (a[i]) {
             count++;
-            prod *= i / last;
+            if (last)  prod *= i / last;
             last = i+1;
         }
-    printf("Dividers count: %.0lf   density: %lf  ", count*1.0, pow(prod, 1/(2.0*count)));
+
+    // Density is the average "distance" to the next largest divider.
+    // Density of 1.03 means that, at average, FFT order will be 3% higher than the block count.
+    // Also you may want to check density for paricular range, f.e. 1000..10000 and/or without some P-1 factors.
+    printf("%.0lf..%.0lf:  dividers count: %.0lf   density: %lf  ", low*1.0, high*1.0, count*1.0, pow(prod, 1/(2.0*(count-1))));
 }
 
 
