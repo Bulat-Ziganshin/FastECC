@@ -295,18 +295,18 @@ void revbin_permute (T* data, size_t n, size_t SIZE)
 
 // Recursive NTT implementation
 template <typename T, T P>
-void RecursiveNTT (T* data, size_t FirstN, size_t N, size_t TOTAL, size_t SIZE, T* roots)
+void RecursiveNTT_Steps (T* data, size_t FirstN, size_t N, size_t SIZE, T* roots)
 {
-    N /= 2;  TOTAL /= 2;
+    N /= 2;
     if (N >= FirstN) {
 #if _OPENMP>=200805
         #pragma omp task if (N>16384)
 #endif
-        RecursiveNTT<T,P> (data,       FirstN, N, TOTAL, SIZE, roots+1);
+        RecursiveNTT_Steps<T,P> (data,        FirstN, N, SIZE, roots+1);
 #if _OPENMP>=200805
         #pragma omp task if (N>16384)
 #endif
-        RecursiveNTT<T,P> (data+TOTAL, FirstN, N, TOTAL, SIZE, roots+1);
+        RecursiveNTT_Steps<T,P> (data+N*SIZE, FirstN, N, SIZE, roots+1);
 #if _OPENMP>=200805
         #pragma omp taskwait
 #endif
@@ -320,19 +320,21 @@ void RecursiveNTT (T* data, size_t FirstN, size_t N, size_t TOTAL, size_t SIZE, 
             data[i2] = GF_Sub<T,P> (data[i1], temp);
             data[i1] = GF_Add<T,P> (data[i1], temp);
         }
-        root_i = GF_Mul<T,P> (root_i, root);              // next root of power 2N of 1
+        root_i = GF_Mul<T,P> (root_i, root);            // next root of power 2N of 1
     }
 }
 
 
 // Iterative NTT implementation
 template <typename T, T P>
-void IterativeNTT (T* data, size_t FirstN, size_t LastN, size_t TOTAL, size_t SIZE, T* root_ptr)
+void IterativeNTT_Steps (T* data, size_t FirstN, size_t LastN, size_t SIZE, T* root_ptr)
 {
-    for (size_t N=FirstN; N<LastN; N*=2) {
+    for (size_t N=FirstN; N<LastN; N*=2) 
+    {
         T root = *--root_ptr;
-        for (size_t x=0; x<TOTAL; x+=2*N*SIZE) {
-            
+        for (size_t x=0; x<LastN*SIZE; x+=2*N*SIZE) 
+        {
+            // first cycle optimized for root_i==1        
             for (size_t k=0; k<SIZE; k++) {                     // cycle over SIZE elements of the single block
                 size_t i1 = x+k, i2 = x+k+N*SIZE;
                 T temp   = data[i2];                            // here we use root**0==1
@@ -340,10 +342,12 @@ void IterativeNTT (T* data, size_t FirstN, size_t LastN, size_t TOTAL, size_t SI
                 data[i1] = GF_Add<T,P> (data[i1], temp);
             }
 
+            // remaining cycles with root_i!=1        
             T root_i = root;                                    // first root of power 2N of 1
-
-            for (size_t i=SIZE; i<N*SIZE; i+=SIZE) {
-                for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
+            for (size_t i=SIZE; i<N*SIZE; i+=SIZE) 
+            {
+                for (size_t k=0; k<SIZE; k++)                   // cycle over SIZE elements of the single block
+                {
                     size_t i1 = x+i+k, i2 = x+i+k+N*SIZE;
                     T temp   = GF_Mul<T,P> (root_i, data[i2]);
                     data[i2] = GF_Sub<T,P> (data[i1], temp);
@@ -380,13 +384,22 @@ void NTT (size_t N, size_t SIZE, T* data)
 #endif
         #pragma omp for
         for (int64_t i=0; i<N*SIZE; i+=S*SIZE)
-            IterativeNTT<T,P> (data+i, 1, S, S*SIZE, SIZE, root_ptr);
+            IterativeNTT_Steps<T,P> (data+i, 1, S, SIZE, root_ptr);
 
         // Larger N values are processed recursively
         #pragma omp master
-        RecursiveNTT<T,P> (data, 2*S, N, N*SIZE, SIZE, roots);
+        RecursiveNTT_Steps<T,P> (data, 2*S, N, SIZE, roots);
     }
 }
+
+
+// Iterative NTT implementation
+template <typename T, T P>
+void IterativeNTT (T* data, size_t N, size_t SIZE, T* root_ptr)
+{
+    revbin_permute<T,P> (data, N, SIZE);
+    IterativeNTT_Steps<T,P> (data, 1, N, SIZE, root_ptr);   
+}    
 
 
 // The matrix Fourier algorithm (MFA)
@@ -408,8 +421,8 @@ void MFA_NTT (size_t N, size_t SIZE, T* data)
         // 1. Apply a (length R) FFT on each column
         #pragma omp for
         for (int64_t i=0; i<N*SIZE; i+=R*SIZE)
-            IterativeNTT<T,P> (data+i, 1, R, R*SIZE, SIZE, root_ptr);   // PROCESS COLUMN, NOT ROW!!!
-
+            IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);   // PROCESS COLUMN, NOT ROW!!!
+ 
         // 2. Multiply each matrix element (index r,c) by *roots ** (r*c)
         T root_r = *roots,  root_arr[R];        
         for (size_t r=1; r<R; r++) {
@@ -433,7 +446,7 @@ void MFA_NTT (size_t N, size_t SIZE, T* data)
         // 3. Apply a (length C) FFT on each row
         #pragma omp for
         for (int64_t i=0; i<N*SIZE; i+=C*SIZE)
-            IterativeNTT<T,P> (data+i, 1, C, C*SIZE, SIZE, root_ptr);
+            IterativeNTT<T,P> (data+i, C, SIZE, root_ptr);
 
         // 4. Transpose the matrix
         assert(R==C);  // transpose algo doesn't support R!=C
