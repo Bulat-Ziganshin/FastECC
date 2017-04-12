@@ -581,20 +581,10 @@ uint32_t hash (T** data, size_t N, size_t SIZE)
 }
 
 
-int main (int argc, char **argv)
+template <typename T, T P>
+void BenchNTT (bool RunMFA, size_t N, size_t SIZE)
 {
-    typedef uint32_t T;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
-    static const T P = 0xFFF00001;
-    char opt  =  (argc==2 && strlen(argv[1])==1?  argv[1][0] : ' ');
-    if (opt=='i')  {Test_GF_Inv<T,P>(); return 0;}
-    if (opt=='m')  {Test_GF_Mul<T,P>(); return 0;}
-    if (opt=='r')  {FindRoot<T,P>(P-1); printf ("%.0lf\n", GF_Root<T,P>(1<<20)*1.0); return 0;} // prints 19 3156611342
-    if (opt=='d')  {DividersDensity<T,P>(); return 0;}
-    if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return 0;}
-
-    const size_t N = 1<<20;     // NTT order
-    const size_t SIZE = 128;    // Block size, in 32-bit elements
-    T *data0 = new T[N*SIZE];   // 512 MB
+    T *data0 = new T[N*SIZE];
     for (size_t i=0; i<N*SIZE; i++)
         data0[i] = i;
 
@@ -604,12 +594,12 @@ int main (int argc, char **argv)
 
     uint32_t hash0 = hash(data, N, SIZE);    // hash of original data
 
-    if (opt=='n')
+    if (RunMFA)
          time_it (N*SIZE*sizeof(T), "MFA_NTT", [&]{MFA_NTT<T,P> (N, SIZE, data, false);});
     else time_it (N*SIZE*sizeof(T), "Rec_NTT", [&]{Rec_NTT<T,P> (N, SIZE, data, false);});
 
     // Inverse NTT
-    if (opt=='n')
+    if (RunMFA)
          MFA_NTT<T,P> (N, SIZE, data, true);
     else Rec_NTT<T,P> (N, SIZE, data, true);
 
@@ -624,6 +614,28 @@ int main (int argc, char **argv)
         printf("Verified!");
     else
         printf("Checksum mismatch: original %.0lf, after NTT+iNTT %.0lf", double(hash0), double(hash1));
+}
 
+
+int main (int argc, char **argv)
+{
+    typedef uint32_t T;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
+    static const T P = 0xFFF00001;
+
+    char opt  =  (argc>=2 && strlen(argv[1])>=1?  argv[1][0] : ' ');
+    if (opt=='i')  {Test_GF_Inv<T,P>(); return 0;}
+    if (opt=='m')  {Test_GF_Mul<T,P>(); return 0;}
+    if (opt=='r')  {FindRoot<T,P>(P-1); printf ("%.0lf\n", GF_Root<T,P>(1<<20)*1.0); return 0;} // prints 19 3156611342
+    if (opt=='d')  {DividersDensity<T,P>(); return 0;}
+    if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return 0;}
+
+    size_t N = 1<<20;   // NTT order
+    size_t SIZE = 512;  // Block size, in bytes
+                        // 512 MB total
+
+    if (argc>=3)  N = 1<<atoi(argv[2]);
+    if (argc>=4)  SIZE = atoi(argv[3]);
+
+    BenchNTT<T,P> (opt=='n', N, SIZE/sizeof(T));
     return 0;
 }
