@@ -350,7 +350,7 @@ int BenchButterfly()
 
 /* re-order data */
 template <typename T, T P>
-void revbin_permute (T** data, size_t n, size_t SIZE)
+void revbin_permute (T** data, size_t n)
 {
     if (n<=2)  return;
     size_t mr = 0; // the reversed 0
@@ -448,7 +448,7 @@ void Rec_NTT (size_t N, size_t SIZE, T** data)
         root = GF_Mul<T,P> (root, root);
     }
 
-    revbin_permute<T,P> (data, N, SIZE);
+    revbin_permute<T,P> (data, N);
 
     #pragma omp parallel
     {
@@ -473,14 +473,14 @@ void Rec_NTT (size_t N, size_t SIZE, T** data)
 template <typename T, T P>
 void IterativeNTT (T** data, size_t N, size_t SIZE, T* root_ptr)
 {
-    revbin_permute<T,P> (data, N, SIZE);
+    revbin_permute<T,P> (data, N);
     IterativeNTT_Steps<T,P> (data, 1, N, SIZE, root_ptr);
 }
 
 
 // Matrix transpose
 template <typename T>
-void TransposeMatrix (size_t R, size_t C, T* data)
+void TransposeMatrix (T* data, size_t R, size_t C)
 {
     #pragma omp single
     if (R==C) {
@@ -524,15 +524,22 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
         root_r = GF_Mul<T,P> (root_r, *roots);    // next root of power N
     }
 
+    // MFA is impossible or doesn't make much sense
+    if (N < 4  ||  N*SIZE < 256*1024)
+    {
+        IterativeNTT<T,P> (data, N, SIZE, root_ptr);
+        return;
+    }
+
 
     #pragma omp parallel
     {
         // 1. Apply a (length R) FFT on each column
-        TransposeMatrix (R, C, data);
+        TransposeMatrix (data, R, C);
         #pragma omp for
         for (int64_t i=0; i<N; i+=R)
             IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);
-        TransposeMatrix (R, C, data);
+        TransposeMatrix (data, R, C);
 
         // 2. Multiply each matrix element (index r,c) by *roots ** (r*c)
         #pragma omp for
@@ -554,7 +561,7 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
             IterativeNTT<T,P> (data+i, C, SIZE, root_ptr);
 
         // 4. Transpose the matrix by transposing block pointers in the data[]
-        TransposeMatrix (R, C, data);
+        TransposeMatrix (data, R, C);
     }
 }
 
