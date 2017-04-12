@@ -9,6 +9,7 @@
 #include <utility>
 #include <functional>
 #include <vector>
+#include <memory>
 
 #include "wall_clock_timer.h"
 
@@ -481,12 +482,21 @@ void IterativeNTT (T** data, size_t N, size_t SIZE, T* root_ptr)
 template <typename T>
 void TransposeMatrix (size_t R, size_t C, T* data)
 {
-    assert(R==C);  // transpose algo doesn't support R!=C
     #pragma omp single
-    for (int r=0; r<R; r++) {
-        for (size_t c=0; c<r; c++) {
-            std::swap (data[r*C+c], data[c*R+r]);
+    if (R==C) {
+        for (int r=0; r<R; r++) {
+            for (size_t c=0; c<r; c++) {
+                std::swap (data[r*C+c], data[c*R+r]);
+            }
         }
+    } else {
+        T* tmp = new T [R*C];  std::unique_ptr<T> _tmp{tmp};
+        for (int r=0; r<R; r++) {
+            for (size_t c=0; c<C; c++) {
+                tmp[c*R+r] = data[r*C+c];
+            }
+        }
+        memcpy (data, tmp, R*C*sizeof(T));
     }
 }
 
