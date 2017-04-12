@@ -3,10 +3,12 @@
 #include <algorithm>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 #include <cassert>
 #include <algorithm>
 #include <utility>
 #include <functional>
+#include <vector>
 
 #include "wall_clock_timer.h"
 
@@ -235,6 +237,40 @@ void Test_GF_Mul()
             }
         }
     }
+}
+
+
+// Print dividers count & density
+template <typename T, T P>
+void DividersDensity()
+{
+    std::vector<bool>  a(P, false);
+
+    if (P == 0xFFF00001)
+    {
+        for (T i=1; i<=9; i*=3)
+        for (T k=1; k<=5; k*=5)
+        for (T l=1; l<=7; l*=7)
+        for (T m=1; m<=13; m*=13)
+        for (T n=1; n<=1<<20; n*=2)
+            a[i*k*l*m*n] = true;
+    } else
+    {
+        // slow generic algo
+        a[P-1] = true;
+        for (T i=1; i<=P/2; i++)
+            if ((P-1) % i  ==  0)
+                a[i] = true;
+    }
+
+    T count = 0;  double prod = 1,  last = 1;
+    for (T i=0; i<P; i++)
+        if (a[i]) {
+            count++;
+            prod *= i / last;
+            last = i+1;
+        }
+    printf("Dividers count: %.0lf   density: %lf  ", count*1.0, pow(prod, 1/(2.0*count)));
 }
 
 
@@ -511,6 +547,7 @@ int main (int argc, char **argv)
     if (opt=='i')  {Test_GF_Inv<T,P>(); return 0;}
     if (opt=='m')  {Test_GF_Mul<T,P>(); return 0;}
     if (opt=='r')  {FindRoot<T,P>(P-1); return 0;} // prints 19
+    if (opt=='d')  {DividersDensity<T,P>(); return 0;}
     if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return 0;}
 
     const size_t N = 1<<20;     // NTT order
