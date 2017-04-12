@@ -6,6 +6,9 @@
 #include <cassert>
 #include <algorithm>
 #include <utility>
+#include <functional>
+
+#include "wall_clock_timer.h"
 
 #if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
 #define MY_CPU_AMD64
@@ -474,6 +477,19 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
 }
 
 
+void time_it (const char* name, std::function<void()> Code)
+{
+    StartTimer();
+    double start = GetTimer(), KernelTime[2], UserTime[2];
+    GetProcessKernelUserTimes (KernelTime, UserTime);
+    Code();
+    GetProcessKernelUserTimes (KernelTime+1, UserTime+1);
+    double wall_time = GetTimer()-start;
+    double cpu_time  = (UserTime[1] - UserTime[0]) * 1000;
+    printf("%s: %.0lf ms,  cpu %.0lf ms = %.0lf%%,  os %.0lf ms\n", name, wall_time, cpu_time, cpu_time/wall_time*100, (KernelTime[1]-KernelTime[0])*1000);
+}
+
+
 int main (int argc, char **argv)
 {
     typedef uint32_t T;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
@@ -482,7 +498,7 @@ int main (int argc, char **argv)
     if (opt=='i')  {Test_GF_Inv<T,P>(); return 0;}
     if (opt=='m')  {Test_GF_Mul<T,P>(); return 0;}
     if (opt=='r')  {FindRoot<T,P>(P-1); return 0;} // prints 19
-    if (opt=='b')  {BenchButterfly<T,P>();  return 0;}
+    if (opt=='b')  {time_it ("Butterfly", [&]{BenchButterfly<T,P>();});  return 0;}
 
     const size_t N = 1<<20;     // NTT order
     const size_t SIZE = 128;    // Block size, in 32-bit elements
@@ -495,8 +511,8 @@ int main (int argc, char **argv)
         data[i] = data0 + i*SIZE;
 
     if (opt=='n')
-         MFA_NTT<T,P> (N, SIZE, data);
-    else NTT<T,P> (N, SIZE, data);
+         time_it ("MFA_NTT", [&]{MFA_NTT<T,P> (N, SIZE, data);});
+    else time_it ("NTT",     [&]{NTT<T,P> (N, SIZE, data);});
 
     uint32_t sum = 314159253;
     for (size_t i=0; i<N; i++)
