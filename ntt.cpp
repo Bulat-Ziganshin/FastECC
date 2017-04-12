@@ -406,30 +406,39 @@ void IterativeNTT (T* data, size_t N, size_t SIZE, T* root_ptr)
 template <typename T, T P>
 void MFA_NTT (size_t N, size_t SIZE, T* data)
 {
-    T root = 1557;                        // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
+    // Split N-size problem into R rows * C columns
+    size_t R = 1;   while (R*R < N)  R*=2;
+    size_t C = N/R;
+    
+    // Find root of 1 of power N
+    T root = 1557;  assert (P==0xFFF00001);     // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
     for (size_t i=1<<20; i>N; i/=2)
-        root = GF_Mul<T,P> (root, root);  // find root of 1 of power N
-    T roots[33], *root_ptr = roots;
-    while (root!=1)
-        *root_ptr++ = root,
-        root = GF_Mul<T,P> (root, root);
+        root = GF_Mul<T,P> (root, root); 
 
+    // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
+    T roots[33], *root_ptr = roots;
+    while (root != 1) {
+        *root_ptr++ = root;
+        root = GF_Mul<T,P> (root, root);
+    }
+
+    // Fill root_arr[i] with *roots ** i, where *roots ** N == 1 
+    T root_r = *roots,  root_arr[1024];        
+    assert(1024 >= R);  // root_arr[] too small
+    for (size_t r=1; r<R; r++) {
+        root_arr[r] = root_r;
+        root_r = GF_Mul<T,P> (root_r, *roots);    // next root of power N
+    }
+
+    
     #pragma omp parallel
     {
-        const size_t R = 1024, C = N/R;
-        
         // 1. Apply a (length R) FFT on each column
         #pragma omp for
         for (int64_t i=0; i<N*SIZE; i+=R*SIZE)
-            IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);   // PROCESS COLUMN, NOT ROW!!!
+            IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);      // PROCESS COLUMN, NOT ROW!!!
  
         // 2. Multiply each matrix element (index r,c) by *roots ** (r*c)
-        T root_r = *roots,  root_arr[R];        
-        for (size_t r=1; r<R; r++) {
-            root_arr[r] = root_r;
-            root_r = GF_Mul<T,P> (root_r, *roots);              // next root of power N
-        }
-
         #pragma omp for
         for (int r=1; r<R; r++) {
             T root_r = root_arr[r];
