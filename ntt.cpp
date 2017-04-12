@@ -25,6 +25,22 @@
 #endif
 
 
+void time_it (int64_t size, const char* name, std::function<void()> Code)
+{
+    static int _ = (StartTimer(),0);
+    double start = GetTimer(), KernelTime[2], UserTime[2];
+    GetProcessKernelUserTimes (KernelTime, UserTime);
+    Code();
+    GetProcessKernelUserTimes (KernelTime+1, UserTime+1);
+    double wall_time = GetTimer()-start;
+    double cpu_time  = (UserTime[1] - UserTime[0]) * 1000;
+    printf("%s: %.0lf ms = %.0lf MiB/s,  cpu %.0lf ms = %.0lf%%,  os %.0lf ms\n",
+        name, wall_time, (size / wall_time)*1000 / (1<<20),
+        cpu_time, cpu_time/wall_time*100,
+        (KernelTime[1]-KernelTime[0])*1000);
+}
+
+
 /***********************************************************************************************************************
 *** GF(P) **************************************************************************************************************
 ************************************************************************************************************************/
@@ -143,6 +159,18 @@ T GF_Pow (T X, T N)
 }
 
 
+// Some primary root of 1 of power N
+template <typename T, T P>
+T GF_Root (T N)
+{
+    assert (P==0xFFF00001);
+    T main_root = 19;  // root of power P-1 in the GF(0xFFF00001)
+
+    assert ((P-1) % N  ==  0);
+    return GF_Pow<T,P> (main_root, (P-1) / N);
+}
+
+
 template <typename T, T P>
 T GF_Inv (T X)
 {
@@ -171,7 +199,7 @@ void Test_GF_Inv()
 }
 
 
-// Find first root of 1 of power N
+// Find first few primary roots of 1 of power N
 template <typename T, T P>
 void FindRoot (T N)
 {
@@ -182,6 +210,7 @@ void FindRoot (T N)
         T q = GF_Pow<T,P> (i,N);
         if (q==1)
         {
+            assert (P==0xFFF00001);
             if (1 == GF_Pow<T,P> (i,N/2) ||
                 1 == GF_Pow<T,P> (i,N/3) ||
                 1 == GF_Pow<T,P> (i,N/5) ||
@@ -411,13 +440,8 @@ void IterativeNTT_Steps (T** data, size_t FirstN, size_t LastN, size_t SIZE, T* 
 template <typename T, T P>
 void Rec_NTT (size_t N, size_t SIZE, T** data)
 {
-    // Find root of 1 of power N
-    T root = 1557;  assert (P==0xFFF00001);     // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
-    for (size_t i=1<<20; i>N; i/=2)
-        root = GF_Mul<T,P> (root, root);
-
     // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
-    T roots[33], *root_ptr = roots;
+    T root = GF_Root<T,P>(N),  roots[33],  *root_ptr = roots;
     while (root != 1) {
         *root_ptr++ = root;
         root = GF_Mul<T,P> (root, root);
@@ -475,13 +499,8 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
     size_t R = 1;   while (R*R < N)  R*=2;
     size_t C = N/R;
 
-    // Find root of 1 of power N
-    T root = 1557;  assert (P==0xFFF00001);     // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
-    for (size_t i=1<<20; i>N; i/=2)
-        root = GF_Mul<T,P> (root, root);
-
     // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
-    T roots[33], *root_ptr = roots;
+    T root = GF_Root<T,P>(N),  roots[33],  *root_ptr = roots;
     while (root != 1) {
         *root_ptr++ = root;
         root = GF_Mul<T,P> (root, root);
@@ -530,22 +549,6 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
 }
 
 
-void time_it (int64_t size, const char* name, std::function<void()> Code)
-{
-    StartTimer();
-    double start = GetTimer(), KernelTime[2], UserTime[2];
-    GetProcessKernelUserTimes (KernelTime, UserTime);
-    Code();
-    GetProcessKernelUserTimes (KernelTime+1, UserTime+1);
-    double wall_time = GetTimer()-start;
-    double cpu_time  = (UserTime[1] - UserTime[0]) * 1000;
-    printf("%s: %.0lf ms = %.0lf MiB/s,  cpu %.0lf ms = %.0lf%%,  os %.0lf ms\n",
-        name, wall_time, (size / wall_time)*1000 / (1<<20),
-        cpu_time, cpu_time/wall_time*100,
-        (KernelTime[1]-KernelTime[0])*1000);
-}
-
-
 int main (int argc, char **argv)
 {
     typedef uint32_t T;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
@@ -553,7 +556,7 @@ int main (int argc, char **argv)
     char opt  =  (argc==2 && strlen(argv[1])==1?  argv[1][0] : ' ');
     if (opt=='i')  {Test_GF_Inv<T,P>(); return 0;}
     if (opt=='m')  {Test_GF_Mul<T,P>(); return 0;}
-    if (opt=='r')  {FindRoot<T,P>(P-1); return 0;} // prints 19
+    if (opt=='r')  {FindRoot<T,P>(P-1); printf ("%.0lf\n", GF_Root<T,P>(1<<20)*1.0); return 0;} // prints 19 3156611342
     if (opt=='d')  {DividersDensity<T,P>(); return 0;}
     if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return 0;}
 
@@ -575,7 +578,7 @@ int main (int argc, char **argv)
     for (size_t i=0; i<N; i++)
         for (size_t k=0; k<SIZE; k++)
             sum = (sum+data[i][k])*123456791 + (sum>>17);
-    if (sum != 3265308580UL)
+    if (sum != 1233526469UL)
         printf("checksum failed: %.0lf", double(sum));
 
     return 0;
