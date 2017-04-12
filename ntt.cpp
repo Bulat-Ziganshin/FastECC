@@ -366,7 +366,7 @@ void IterativeNTT_Steps (T** data, size_t FirstN, size_t LastN, size_t SIZE, T* 
 
 // GF(P) NTT of N==2**X points of type T. Each point represented by SIZE elements (sequential in memory), so we perform SIZE transforms simultaneously
 template <typename T, T P>
-void NTT (size_t N, size_t SIZE, T** data)
+void Rec_NTT (size_t N, size_t SIZE, T** data)
 {
     // Find root of 1 of power N
     T root = 1557;  assert (P==0xFFF00001);     // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
@@ -410,6 +410,20 @@ void IterativeNTT (T** data, size_t N, size_t SIZE, T* root_ptr)
 }
 
 
+// Matrix transpose
+template <typename T>
+void TransposeMatrix (size_t R, size_t C, T* data)
+{
+    assert(R==C);  // transpose algo doesn't support R!=C
+    #pragma omp for
+    for (int r=0; r<R; r++) {
+        for (size_t c=0; c<r; c++) {
+            std::swap (data[r*C+c], data[c*R+r]);
+        }
+    }
+}
+
+
 // The matrix Fourier algorithm (MFA)
 template <typename T, T P>
 void MFA_NTT (size_t N, size_t SIZE, T** data)
@@ -442,9 +456,11 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
     #pragma omp parallel
     {
         // 1. Apply a (length R) FFT on each column
+        TransposeMatrix (R, C, data);
         #pragma omp for
         for (int64_t i=0; i<N; i+=R)
-            IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);      // PROCESS COLUMN, NOT ROW!!!
+            IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);
+        TransposeMatrix (R, C, data);
 
         // 2. Multiply each matrix element (index r,c) by *roots ** (r*c)
         #pragma omp for
@@ -466,13 +482,7 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
             IterativeNTT<T,P> (data+i, C, SIZE, root_ptr);
 
         // 4. Transpose the matrix by transposing block pointers in the data[]
-        assert(R==C);  // transpose algo doesn't support R!=C
-        #pragma omp for
-        for (int r=0; r<R; r++) {
-            for (size_t c=0; c<r; c++) {
-                std::swap (data[r*C+c], data[c*R+r]);
-            }
-        }
+        TransposeMatrix (R, C, data);
     }
 }
 
@@ -515,7 +525,7 @@ int main (int argc, char **argv)
 
     if (opt=='n')
          time_it (N*SIZE*sizeof(T), "MFA_NTT", [&]{MFA_NTT<T,P> (N, SIZE, data);});
-    else time_it (N*SIZE*sizeof(T), "NTT",     [&]{NTT<T,P> (N, SIZE, data);});
+    else time_it (N*SIZE*sizeof(T), "Rec_NTT", [&]{Rec_NTT<T,P> (N, SIZE, data);});
 
     uint32_t sum = 314159253;
     for (size_t i=0; i<N; i++)
