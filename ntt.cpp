@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <cassert>
-#include <algorithm> 
+#include <algorithm>
 #include <utility>
 
 #if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
@@ -270,7 +270,7 @@ int BenchButterfly()
 
 /* re-order data */
 template <typename T, T P>
-void revbin_permute (T* data, size_t n, size_t SIZE)
+void revbin_permute (T** data, size_t n, size_t SIZE)
 {
     if (n<=2)  return;
     size_t mr = 0; // the reversed 0
@@ -283,42 +283,43 @@ void revbin_permute (T* data, size_t n, size_t SIZE)
         mr = (mr & (l-1)) + l;
 
         if (mr > m) {
-            T* block1 = data + m*SIZE;
-            T* block2 = data + mr*SIZE;
+            T* block1 = data[m];
+            T* block2 = data[mr];
             for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
                 std::swap (block1[k], block2[k]);
             }
         }
     }
-}    
+}
 
 
 // Recursive NTT implementation
 template <typename T, T P>
-void RecursiveNTT_Steps (T* data, size_t FirstN, size_t N, size_t SIZE, T* roots)
+void RecursiveNTT_Steps (T** data, size_t FirstN, size_t N, size_t SIZE, T* roots)
 {
     N /= 2;
     if (N >= FirstN) {
 #if _OPENMP>=200805
         #pragma omp task if (N>16384)
 #endif
-        RecursiveNTT_Steps<T,P> (data,        FirstN, N, SIZE, roots+1);
+        RecursiveNTT_Steps<T,P> (data,   FirstN, N, SIZE, roots+1);
 #if _OPENMP>=200805
         #pragma omp task if (N>16384)
 #endif
-        RecursiveNTT_Steps<T,P> (data+N*SIZE, FirstN, N, SIZE, roots+1);
+        RecursiveNTT_Steps<T,P> (data+N, FirstN, N, SIZE, roots+1);
 #if _OPENMP>=200805
         #pragma omp taskwait
 #endif
     }
 
     T root = *roots,   root_i = 1;                      // zeroth root of power 2N of 1
-    for (size_t i=0; i<N*SIZE; i+=SIZE) {
+    for (size_t i=0; i<N; i++) {
+        T* block1 = data[i];
+        T* block2 = data[i+N];
         for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
-            size_t i1 = i+k, i2 = i+k+N*SIZE;
-            T temp   = GF_Mul<T,P> (root_i, data[i2]);
-            data[i2] = GF_Sub<T,P> (data[i1], temp);
-            data[i1] = GF_Add<T,P> (data[i1], temp);
+            T temp    = GF_Mul<T,P> (block2[k], root_i);
+            block2[k] = GF_Sub<T,P> (block1[k], temp);
+            block1[k] = GF_Add<T,P> (block1[k], temp);
         }
         root_i = GF_Mul<T,P> (root_i, root);            // next root of power 2N of 1
     }
@@ -327,31 +328,31 @@ void RecursiveNTT_Steps (T* data, size_t FirstN, size_t N, size_t SIZE, T* roots
 
 // Iterative NTT implementation
 template <typename T, T P>
-void IterativeNTT_Steps (T* data, size_t FirstN, size_t LastN, size_t SIZE, T* root_ptr)
+void IterativeNTT_Steps (T** data, size_t FirstN, size_t LastN, size_t SIZE, T* root_ptr)
 {
-    for (size_t N=FirstN; N<LastN; N*=2) 
+    for (size_t N=FirstN; N<LastN; N*=2)
     {
         T root = *--root_ptr;
-        for (size_t x=0; x<LastN*SIZE; x+=2*N*SIZE) 
+        for (size_t x=0; x<LastN; x+=2*N)
         {
-            // first cycle optimized for root_i==1        
+            // first cycle optimized for root_i==1
+            T* block1 = data[x];
+            T* block2 = data[x+N];
             for (size_t k=0; k<SIZE; k++) {                     // cycle over SIZE elements of the single block
-                size_t i1 = x+k, i2 = x+k+N*SIZE;
-                T temp   = data[i2];                            // here we use root**0==1
-                data[i2] = GF_Sub<T,P> (data[i1], temp);
-                data[i1] = GF_Add<T,P> (data[i1], temp);
+                T temp    = block2[k];                          // optimized for root_i==1
+                block2[k] = GF_Sub<T,P> (block1[k], temp);
+                block1[k] = GF_Add<T,P> (block1[k], temp);
             }
 
-            // remaining cycles with root_i!=1        
+            // remaining cycles with root_i!=1
             T root_i = root;                                    // first root of power 2N of 1
-            for (size_t i=SIZE; i<N*SIZE; i+=SIZE) 
-            {
-                for (size_t k=0; k<SIZE; k++)                   // cycle over SIZE elements of the single block
-                {
-                    size_t i1 = x+i+k, i2 = x+i+k+N*SIZE;
-                    T temp   = GF_Mul<T,P> (root_i, data[i2]);
-                    data[i2] = GF_Sub<T,P> (data[i1], temp);
-                    data[i1] = GF_Add<T,P> (data[i1], temp);
+            for (size_t i=1; i<N; i++) {
+                T* block1 = data[x+i];
+                T* block2 = data[x+i+N];
+                for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
+                    T temp    = GF_Mul<T,P> (block2[k], root_i);
+                    block2[k] = GF_Sub<T,P> (block1[k], temp);
+                    block1[k] = GF_Add<T,P> (block1[k], temp);
                 }
                 root_i = GF_Mul<T,P> (root_i, root);            // next root of power 2N of 1
             }
@@ -362,7 +363,7 @@ void IterativeNTT_Steps (T* data, size_t FirstN, size_t LastN, size_t SIZE, T* r
 
 // GF(P) NTT of N==2**X points of type T. Each point represented by SIZE elements (sequential in memory), so we perform SIZE transforms simultaneously
 template <typename T, T P>
-void NTT (size_t N, size_t SIZE, T* data)
+void NTT (size_t N, size_t SIZE, T** data)
 {
     T root = 1557;                      // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
     for (size_t i=1<<20; i>N; i/=2)
@@ -383,7 +384,7 @@ void NTT (size_t N, size_t SIZE, T* data)
         const size_t S = 65536/(SIZE*sizeof(T));    // otherwise stay in L2 cache
 #endif
         #pragma omp for
-        for (int64_t i=0; i<N*SIZE; i+=S*SIZE)
+        for (int64_t i=0; i<N; i+=S)
             IterativeNTT_Steps<T,P> (data+i, 1, S, SIZE, root_ptr);
 
         // Larger N values are processed recursively
@@ -395,25 +396,25 @@ void NTT (size_t N, size_t SIZE, T* data)
 
 // Iterative NTT implementation
 template <typename T, T P>
-void IterativeNTT (T* data, size_t N, size_t SIZE, T* root_ptr)
+void IterativeNTT (T** data, size_t N, size_t SIZE, T* root_ptr)
 {
     revbin_permute<T,P> (data, N, SIZE);
-    IterativeNTT_Steps<T,P> (data, 1, N, SIZE, root_ptr);   
-}    
+    IterativeNTT_Steps<T,P> (data, 1, N, SIZE, root_ptr);
+}
 
 
 // The matrix Fourier algorithm (MFA)
 template <typename T, T P>
-void MFA_NTT (size_t N, size_t SIZE, T* data)
+void MFA_NTT (size_t N, size_t SIZE, T** data)
 {
     // Split N-size problem into R rows * C columns
     size_t R = 1;   while (R*R < N)  R*=2;
     size_t C = N/R;
-    
+
     // Find root of 1 of power N
     T root = 1557;  assert (P==0xFFF00001);     // init 'root' with root of 1 of power 2**20 in GF(0xFFF00001)
     for (size_t i=1<<20; i>N; i/=2)
-        root = GF_Mul<T,P> (root, root); 
+        root = GF_Mul<T,P> (root, root);
 
     // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
     T roots[33], *root_ptr = roots;
@@ -422,39 +423,39 @@ void MFA_NTT (size_t N, size_t SIZE, T* data)
         root = GF_Mul<T,P> (root, root);
     }
 
-    // Fill root_arr[i] with *roots ** i, where *roots ** N == 1 
-    T root_r = *roots,  root_arr[1024];        
+    // Fill root_arr[i] with *roots ** i, where *roots ** N == 1
+    T root_r = *roots,  root_arr[1024];
     assert(1024 >= R);  // root_arr[] too small
     for (size_t r=1; r<R; r++) {
         root_arr[r] = root_r;
         root_r = GF_Mul<T,P> (root_r, *roots);    // next root of power N
     }
 
-    
+
     #pragma omp parallel
     {
         // 1. Apply a (length R) FFT on each column
         #pragma omp for
-        for (int64_t i=0; i<N*SIZE; i+=R*SIZE)
+        for (int64_t i=0; i<N; i+=R)
             IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);      // PROCESS COLUMN, NOT ROW!!!
- 
+
         // 2. Multiply each matrix element (index r,c) by *roots ** (r*c)
         #pragma omp for
         for (int r=1; r<R; r++) {
             T root_r = root_arr[r];
             for (size_t c=1; c<C; c++) {
                 T root_c = root_r;
-                T* block = data + (r*C+c)*SIZE;
+                T* block = data[r*C+c];
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
                     block[k] = GF_Mul<T,P> (block[k], root_c);
                 }
                 root_c = GF_Mul<T,P> (root_c, root_r);          // next root of power N/R
             }
         }
-        
+
         // 3. Apply a (length C) FFT on each row
         #pragma omp for
-        for (int64_t i=0; i<N*SIZE; i+=C*SIZE)
+        for (int64_t i=0; i<N; i+=C)
             IterativeNTT<T,P> (data+i, C, SIZE, root_ptr);
 
         // 4. Transpose the matrix
@@ -462,8 +463,8 @@ void MFA_NTT (size_t N, size_t SIZE, T* data)
         #pragma omp for
         for (int r=0; r<R; r++) {
             for (size_t c=0; c<r; c++) {
-                T* block1 = data + (r*C+c)*SIZE;
-                T* block2 = data + (c*R+r)*SIZE;
+                T* block1 = data[r*C+c];
+                T* block2 = data[c*R+r];
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
                     std::swap (block1[k], block2[k]);
                 }
@@ -483,19 +484,24 @@ int main (int argc, char **argv)
     if (opt=='r')  {FindRoot<T,P>(P-1); return 0;} // prints 19
     if (opt=='b')  {BenchButterfly<T,P>();  return 0;}
 
-    const size_t N = 1<<20;   // NTT order
-    const size_t SIZE = 128;  // Block size, in 32-bit elements
-    T *data = new T[N*SIZE];  // 512 MB
-    for (int i=0; i<N*SIZE; i++)
-        data[i] = i;
+    const size_t N = 1<<20;     // NTT order
+    const size_t SIZE = 128;    // Block size, in 32-bit elements
+    T *data0 = new T[N*SIZE];   // 512 MB
+    for (size_t i=0; i<N*SIZE; i++)
+        data0[i] = i;
 
-    if (opt=='n')  
+    T **data = new T* [N];      // pointers to blocks
+    for (size_t i=0; i<N; i++)
+        data[i] = data0 + i*SIZE;
+
+    if (opt=='n')
          MFA_NTT<T,P> (N, SIZE, data);
-    else NTT<T,P> (N, SIZE, data);    
+    else NTT<T,P> (N, SIZE, data);
 
     uint32_t sum = 314159253;
-    for (int i=0; i<N*SIZE; i++)
-        sum = (sum+data[i])*123456791;
+    for (size_t i=0; i<N; i++)
+        for (size_t k=0; k<SIZE; k++)
+            sum = (sum+data[i][k])*123456791;
     if (sum != 3677140454UL)
         printf("checksum failed: %.0lf", double(sum));
 
