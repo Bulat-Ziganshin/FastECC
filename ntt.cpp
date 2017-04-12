@@ -258,13 +258,13 @@ int BenchButterfly()
 {
     T x=0;
     #pragma omp parallel for
-    for (int n=0; n<8; n++)
+    for (int n=0; n<1024; n++)
     {
         const int sz = 1280;
         T a[sz], b[sz];
         for (int i=0; i<sz; i++)
             a[i] = i*7+1, b[i] = i*15+8;
-        Butterfly<T,P> (a, b, 128*1024, sz, 1557);
+        Butterfly<T,P> (a, b, 1024, sz, 1557);
         x += a[0];
     }
     return x?1:0;
@@ -513,8 +513,8 @@ int main (int argc, char **argv)
     if (opt=='r')  {FindRoot<T,P>(P-1); return 0;} // prints 19
     if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return 0;}
 
-    const size_t N = 1<<18;     // NTT order
-    const size_t SIZE = 512;    // Block size, in 32-bit elements
+    const size_t N = 1<<20;     // NTT order
+    const size_t SIZE = 128;    // Block size, in 32-bit elements
     T *data0 = new T[N*SIZE];   // 512 MB
     for (size_t i=0; i<N*SIZE; i++)
         data0[i] = i;
@@ -530,8 +530,8 @@ int main (int argc, char **argv)
     uint32_t sum = 314159253;
     for (size_t i=0; i<N; i++)
         for (size_t k=0; k<SIZE; k++)
-            sum = (sum+data[i][k])*123456791;
-    if (sum != 3528284390UL)
+            sum = (sum+data[i][k])*123456791 + (sum>>17);
+    if (sum != 3265308580UL)
         printf("checksum failed: %.0lf", double(sum));
 
     return 0;
