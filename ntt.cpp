@@ -439,10 +439,11 @@ void IterativeNTT_Steps (T** data, size_t FirstN, size_t LastN, size_t SIZE, T* 
 
 // GF(P) NTT of N==2**X points of type T. Each point represented by SIZE elements (sequential in memory), so we perform SIZE transforms simultaneously
 template <typename T, T P>
-void Rec_NTT (size_t N, size_t SIZE, T** data)
+void Rec_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
 {
     // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
     T root = GF_Root<T,P>(N),  roots[33],  *root_ptr = roots;
+    if (InvNTT)  root = GF_Inv<T,P>(root);
     while (root != 1) {
         *root_ptr++ = root;
         root = GF_Mul<T,P> (root, root);
@@ -503,7 +504,7 @@ void TransposeMatrix (T* data, size_t R, size_t C)
 
 // The matrix Fourier algorithm (MFA)
 template <typename T, T P>
-void MFA_NTT (size_t N, size_t SIZE, T** data)
+void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
 {
     // Split N-size problem into R rows * C columns
     size_t R = 1;   while (R*R < N)  R*=2;
@@ -511,6 +512,7 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
 
     // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
     T root = GF_Root<T,P>(N),  roots[33],  *root_ptr = roots;
+    if (InvNTT)  root = GF_Inv<T,P>(root);
     while (root != 1) {
         *root_ptr++ = root;
         root = GF_Mul<T,P> (root, root);
@@ -566,6 +568,19 @@ void MFA_NTT (size_t N, size_t SIZE, T** data)
 }
 
 
+template <typename T>
+uint32_t hash (T** data, size_t N, size_t SIZE)
+{
+    uint32_t hash = 314159253;
+    for (size_t i=0; i<N; i++) {
+        uint32_t* ptr = (uint32_t*) data[i];
+        for (size_t k=0; k<SIZE*sizeof(T)/sizeof(uint32_t); k++)
+            hash = (hash+ptr[k])*123456791 + (hash>>17);
+    }
+    return hash;
+}
+
+
 int main (int argc, char **argv)
 {
     typedef uint32_t T;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
@@ -587,16 +602,28 @@ int main (int argc, char **argv)
     for (size_t i=0; i<N; i++)
         data[i] = data0 + i*SIZE;
 
-    if (opt=='n')
-         time_it (N*SIZE*sizeof(T), "MFA_NTT", [&]{MFA_NTT<T,P> (N, SIZE, data);});
-    else time_it (N*SIZE*sizeof(T), "Rec_NTT", [&]{Rec_NTT<T,P> (N, SIZE, data);});
+    uint32_t hash0 = hash(data, N, SIZE);    // hash of original data
 
-    uint32_t sum = 314159253;
-    for (size_t i=0; i<N; i++)
-        for (size_t k=0; k<SIZE; k++)
-            sum = (sum+data[i][k])*123456791 + (sum>>17);
-    if (sum != 1233526469UL)
-        printf("checksum failed: %.0lf", double(sum));
+    if (opt=='n')
+         time_it (N*SIZE*sizeof(T), "MFA_NTT", [&]{MFA_NTT<T,P> (N, SIZE, data, false);});
+    else time_it (N*SIZE*sizeof(T), "Rec_NTT", [&]{Rec_NTT<T,P> (N, SIZE, data, false);});
+
+    // Inverse NTT
+    if (opt=='n')
+         MFA_NTT<T,P> (N, SIZE, data, true);
+    else Rec_NTT<T,P> (N, SIZE, data, true);
+
+    // Normalize the result by dividing by N
+    T inv_N = GF_Inv<T,P>(N);
+    for (size_t i=0; i<N*SIZE; i++)
+        data0[i] = GF_Mul<T,P> (data0[i], inv_N);
+
+    // Now we should have exactly the input data
+    uint32_t hash1 = hash(data, N, SIZE);    // hash after NTT+iNTT
+    if (hash1 == hash0)
+        printf("Verified!");
+    else
+        printf("Checksum mismatch: original %.0lf, after NTT+iNTT %.0lf", double(hash0), double(hash1));
 
     return 0;
 }
