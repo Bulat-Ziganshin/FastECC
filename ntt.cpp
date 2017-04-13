@@ -552,8 +552,8 @@ void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
         #pragma omp for
         for (int r=1; r<R; r++) {
             T root_r = root_arr[r];
+            T root_c = root_r;
             for (size_t c=1; c<C; c++) {
-                T root_c = root_r;
                 T* block = data[r*C+c];
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
                     block[k] = GF_Mul<T,P> (block[k], root_c);
@@ -586,7 +586,7 @@ void Slow_NTT (size_t N, size_t SIZE, T* data, bool InvNTT)
     for (T i=0; i<N; ++i)
     {
         #pragma omp parallel for
-        for (size_t k=0; k<SIZE; k++)   // cycle over SIZE elements of the single block
+        for (int k=0; k<SIZE; k++)      // cycle over SIZE elements of the single block
         {
             T t = 0;
             T w = 1;
@@ -708,7 +708,7 @@ int main (int argc, char **argv)
 
 // MS: both P have the same speed, GCC: 65537 is 10% faster
 // to do:
-// implement naive NTT in order to verify fast NTT correctness
-// ntt32* doesn't work with 65537, probably due to hardcoded decisions in GF_Mul32
+// "b N SIZE" in cmdline
+// ntt32*.exe/GF_Mul32 doesn't work with 65537, probably due to hardcoded assumptions about P in GF_Mul32
 // replace "(res>X)*P" in GF_Sub with bit arithmetics
 // MS GF_Mul64 should be faster with the same algo as GCC one
