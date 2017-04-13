@@ -460,9 +460,9 @@ void Rec_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
     {
         // Smaller N values up to S are processed iteratively
 #if defined(_OPENMP) && (_OPENMP < 200805)
-        const size_t S = N/16;  // optimized for OpenMP 2.0 - do as much work as possible in the paralleled for loop
+        const size_t S = N/16;  // optimized for OpenMP 2.0 - do as much work as possible in the parallelized for loop
 #else
-        const size_t S = 65536/(SIZE*sizeof(T));    // otherwise stay in L2 cache
+        const size_t S = 1 << int(logb (99000/(SIZE*sizeof(T)) ));    // otherwise stay in L2 cache
 #endif
         #pragma omp for
         for (int64_t i=0; i<N; i+=S)
