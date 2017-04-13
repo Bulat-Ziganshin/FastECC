@@ -164,8 +164,8 @@ T GF_Pow (T X, T N)
 template <typename T, T P>
 T GF_Root (T N)
 {
-    assert (P==0xFFF00001);
-    T main_root = 19;  // root of power P-1 in the GF(0xFFF00001)
+    assert (P==0xFFF00001 || P==0x10001);
+    T main_root  =  (P==0x10001? 3 : 19);  // root of power P-1 in the GF(P)
 
     assert ((P-1) % N  ==  0);
     return GF_Pow<T,P> (main_root, (P-1) / N);
@@ -211,14 +211,19 @@ void FindRoot (T N)
         T q = GF_Pow<T,P> (i,N);
         if (q==1)
         {
-            assert (P==0xFFF00001);
-            if (1 == GF_Pow<T,P> (i,N/2) ||
-                1 == GF_Pow<T,P> (i,N/3) ||
-                1 == GF_Pow<T,P> (i,N/5) ||
-                1 == GF_Pow<T,P> (i,N/7) ||
-                1 == GF_Pow<T,P> (i,N/13) ||
-                0)
-                goto next;
+            assert (P==0xFFF00001 || P==0x10001);
+
+            if (P==0x10001) {
+                if (1 == GF_Pow<T,P> (i,N/2))  goto next;
+            } else {
+                if (1 == GF_Pow<T,P> (i,N/2) ||
+                    1 == GF_Pow<T,P> (i,N/3) ||
+                    1 == GF_Pow<T,P> (i,N/5) ||
+                    1 == GF_Pow<T,P> (i,N/7) ||
+                    1 == GF_Pow<T,P> (i,N/13) ||
+                    0)
+                    goto next;
+            }
 /*
 
 
@@ -586,7 +591,7 @@ void BenchNTT (bool RunMFA, size_t N, size_t SIZE)
 {
     T *data0 = new T[N*SIZE];
     for (size_t i=0; i<N*SIZE; i++)
-        data0[i] = i;
+        data0[i] = i%P;
 
     T **data = new T* [N];      // pointers to blocks
     for (size_t i=0; i<N; i++)
@@ -617,17 +622,15 @@ void BenchNTT (bool RunMFA, size_t N, size_t SIZE)
 }
 
 
-int main (int argc, char **argv)
+template <typename T, T P>
+void Code (int argc, char **argv)
 {
-    typedef uint32_t T;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
-    static const T P = 0xFFF00001;
-
-    char opt  =  (argc>=2 && strlen(argv[1])>=1?  argv[1][0] : ' ');
-    if (opt=='i')  {Test_GF_Inv<T,P>(); return 0;}
-    if (opt=='m')  {Test_GF_Mul<T,P>(); return 0;}
-    if (opt=='r')  {FindRoot<T,P>(P-1); printf ("%.0lf\n", GF_Root<T,P>(1<<20)*1.0); return 0;} // prints 19 3156611342
-    if (opt=='d')  {DividersDensity<T,P>(); return 0;}
-    if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return 0;}
+    char opt  =  (argc>=2?  argv[1][0] : ' ');
+    if (opt=='i')  {Test_GF_Inv<T,P>();  return;}
+    if (opt=='m')  {Test_GF_Mul<T,P>();  return;}
+    if (opt=='r')  {FindRoot<T,P>(P-1);  printf ("GF_Root %s\n", GF_Root<T,P>(2)==P-1? "OK": "failed");  return;}
+    if (opt=='d')  {DividersDensity<T,P>();  return;}
+    if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return;}
 
     size_t N = 1<<20;   // NTT order
     size_t SIZE = 512;  // Block size, in bytes
@@ -636,6 +639,18 @@ int main (int argc, char **argv)
     if (argc>=3)  N = 1<<atoi(argv[2]);
     if (argc>=4)  SIZE = atoi(argv[3]);
 
+    assert(N<P);  // Too long NTT for such small P
     BenchNTT<T,P> (opt=='n', N, SIZE/sizeof(T));
+}
+
+int main (int argc, char **argv)
+{
+    if (argc>=2 && argv[1][0]=='=')
+    {
+        argv[1]++;
+        Code <uint32_t,0x10001> (argc, argv);
+    } else {
+        Code <uint32_t,0xFFF00001> (argc, argv);
+    }
     return 0;
 }
