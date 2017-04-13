@@ -599,9 +599,14 @@ void BenchNTT (bool RunMFA, size_t N, size_t SIZE)
 
     uint32_t hash0 = hash(data, N, SIZE);    // hash of original data
 
+    char title[99];
+    for (int i=64; i--; )
+        if (T(1)<<i == N)
+            sprintf (title, "%s<2^%d,%.0lf>", RunMFA?"MFA_NTT":"Rec_NTT", i, SIZE*1.0*sizeof(T));
+
     if (RunMFA)
-         time_it (N*SIZE*sizeof(T), "MFA_NTT", [&]{MFA_NTT<T,P> (N, SIZE, data, false);});
-    else time_it (N*SIZE*sizeof(T), "Rec_NTT", [&]{Rec_NTT<T,P> (N, SIZE, data, false);});
+         time_it (N*SIZE*sizeof(T), title, [&]{MFA_NTT<T,P> (N, SIZE, data, false);});
+    else time_it (N*SIZE*sizeof(T), title, [&]{Rec_NTT<T,P> (N, SIZE, data, false);});
 
     // Inverse NTT
     if (RunMFA)
@@ -639,7 +644,7 @@ void Code (int argc, char **argv)
     if (argc>=3)  N = 1<<atoi(argv[2]);
     if (argc>=4)  SIZE = atoi(argv[3]);
 
-    assert(N<P);  // Too long NTT for such small P
+    assert(N<P);  // Too long NTT for the such small P
     BenchNTT<T,P> (opt=='n', N, SIZE/sizeof(T));
 }
 
@@ -654,3 +659,10 @@ int main (int argc, char **argv)
     }
     return 0;
 }
+
+// MS: both P have the same speed, GCC: 65537 is 10% faster
+// to do:
+// implement naive NTT in order to verify fast NTT correctness
+// ntt32* doesn't work with 65537, probably due to hardcoded decisions in GF_Mul32
+// replace "(res>X)*P" in GF_Sub with bit arithmetics
+// MS GF_Mul64 should be faster with the same algo as GCC one
