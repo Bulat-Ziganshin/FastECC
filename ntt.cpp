@@ -573,6 +573,47 @@ void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
 }
 
 
+// Number theoretic transform by definition (slow!)
+template <typename T, T P>
+void Slow_NTT (size_t N, size_t SIZE, T* data, bool InvNTT)
+{
+    T *outdata = new T[N*SIZE];
+
+    T root = GF_Root<T,P>(N);
+    if (InvNTT)  root = GF_Inv<T,P>(root);
+
+    T dw = 1;
+    for (T i=0; i<N; ++i)
+    {
+        #pragma omp parallel for
+        for (size_t k=0; k<SIZE; k++)   // cycle over SIZE elements of the single block
+        {
+            T t = 0;
+            T w = 1;
+
+            for (T x=0; x<N; ++x)
+            {
+                T tmp = GF_Mul<T,P> (w, data[x*SIZE+k]);
+                t = GF_Add<T,P> (t, tmp);
+                w = GF_Mul<T,P> (w, dw);
+            }
+
+            outdata[i*SIZE+k] = t;
+        }
+
+        dw = GF_Mul<T,P> (dw, root);      // next root of power N
+    }
+
+    memcpy (data, outdata, N*SIZE*sizeof(T));
+    delete[] outdata;
+}
+
+
+/***********************************************************************************************************************
+*** The benchmarking driver ********************************************************************************************
+************************************************************************************************************************/
+
+// Return hash of the data
 template <typename T>
 uint32_t hash (T** data, size_t N, size_t SIZE)
 {
@@ -586,8 +627,9 @@ uint32_t hash (T** data, size_t N, size_t SIZE)
 }
 
 
+// Benchmark and verify two NTT implementations: Rec_NTT() & MFA_NTT(), compare results to definitive Slow_NTT()
 template <typename T, T P>
-void BenchNTT (bool RunMFA, size_t N, size_t SIZE)
+void BenchNTT (bool RunMFA, bool RunCanonical, size_t N, size_t SIZE)
 {
     T *data0 = new T[N*SIZE];
     for (size_t i=0; i<N*SIZE; i++)
@@ -602,16 +644,18 @@ void BenchNTT (bool RunMFA, size_t N, size_t SIZE)
     char title[99];
     for (int i=64; i--; )
         if (T(1)<<i == N)
-            sprintf (title, "%s<2^%d,%.0lf>", RunMFA?"MFA_NTT":"Rec_NTT", i, SIZE*1.0*sizeof(T));
+            sprintf (title, "%s<2^%d,%.0lf>", RunCanonical?"Slow_NTT":RunMFA?"MFA_NTT":"Rec_NTT", i, SIZE*1.0*sizeof(T));
 
-    if (RunMFA)
-         time_it (N*SIZE*sizeof(T), title, [&]{MFA_NTT<T,P> (N, SIZE, data, false);});
-    else time_it (N*SIZE*sizeof(T), title, [&]{Rec_NTT<T,P> (N, SIZE, data, false);});
+    if (RunCanonical) time_it (N*SIZE*sizeof(T), title, [&]{Slow_NTT<T,P> (N, SIZE, data0,false);});
+    else if (RunMFA)  time_it (N*SIZE*sizeof(T), title, [&]{MFA_NTT <T,P> (N, SIZE, data, false);});
+    else              time_it (N*SIZE*sizeof(T), title, [&]{Rec_NTT <T,P> (N, SIZE, data, false);});
+
+    uint32_t hash1 = hash(data, N, SIZE);    // hash after NTT
 
     // Inverse NTT
-    if (RunMFA)
-         MFA_NTT<T,P> (N, SIZE, data, true);
-    else Rec_NTT<T,P> (N, SIZE, data, true);
+    if (RunCanonical) Slow_NTT<T,P> (N, SIZE, data0,true);
+    else if (RunMFA)  MFA_NTT <T,P> (N, SIZE, data, true);
+    else              Rec_NTT <T,P> (N, SIZE, data, true);
 
     // Normalize the result by dividing by N
     T inv_N = GF_Inv<T,P>(N);
@@ -619,14 +663,15 @@ void BenchNTT (bool RunMFA, size_t N, size_t SIZE)
         data0[i] = GF_Mul<T,P> (data0[i], inv_N);
 
     // Now we should have exactly the input data
-    uint32_t hash1 = hash(data, N, SIZE);    // hash after NTT+iNTT
-    if (hash1 == hash0)
-        printf("Verified!");
+    uint32_t hash2 = hash(data, N, SIZE);    // hash after NTT+iNTT
+    if (hash2 == hash0)
+        printf("Verified!  Original %.0lf,  after NTT: %.0lf  ", double(hash0), double(hash1));
     else
-        printf("Checksum mismatch: original %.0lf, after NTT+iNTT %.0lf", double(hash0), double(hash1));
+        printf("Checksum mismatch: original %.0lf,  after NTT: %.0lf,  after NTT+iNTT %.0lf", double(hash0), double(hash1), double(hash2));
 }
 
 
+// Parse cmdline and invoke appropriate benchmark/test routine
 template <typename T, T P>
 void Code (int argc, char **argv)
 {
@@ -645,9 +690,10 @@ void Code (int argc, char **argv)
     if (argc>=4)  SIZE = atoi(argv[3]);
 
     assert(N<P);  // Too long NTT for the such small P
-    BenchNTT<T,P> (opt=='n', N, SIZE/sizeof(T));
+    BenchNTT<T,P> (opt=='n', opt=='s', N, SIZE/sizeof(T));
 }
 
+// Deal with '=' argv[1] prefix: switch to P=0x10001
 int main (int argc, char **argv)
 {
     if (argc>=2 && argv[1][0]=='=')
