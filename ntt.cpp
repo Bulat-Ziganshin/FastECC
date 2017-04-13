@@ -447,7 +447,7 @@ template <typename T, T P>
 void Rec_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
 {
     // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
-    T root = GF_Root<T,P>(N),  roots[33],  *root_ptr = roots;
+    T root = GF_Root<T,P>(N),  roots[66],  *root_ptr = roots;
     if (InvNTT)  root = GF_Inv<T,P>(root);
     while (root != 1) {
         *root_ptr++ = root;
@@ -516,22 +516,22 @@ void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
     size_t C = N/R;
 
     // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
-    T root = GF_Root<T,P>(N),  roots[33],  *root_ptr = roots;
+    T root = GF_Root<T,P>(N),  roots[66],  *root_ptr = roots;
     if (InvNTT)  root = GF_Inv<T,P>(root);
     while (root != 1) {
         *root_ptr++ = root;
         root = GF_Mul<T,P> (root, root);
     }
 
-    // Fill root_arr[i] with *roots ** i, where *roots ** N == 1
-    T root_r = *roots,  root_arr[1024];
-    assert(1024 >= R);  // root_arr[] too small
+    // Fill root_arr[i] with roots[0] ** i, where roots[0] ** N == 1
+    T root_r = roots[0],  root_arr[1024];
+    assert(1024 >= R);  // root_arr[] is too small
     for (size_t r=1; r<R; r++) {
         root_arr[r] = root_r;
-        root_r = GF_Mul<T,P> (root_r, *roots);    // next root of power N
+        root_r = GF_Mul<T,P> (root_r, roots[0]);    // next root of power N
     }
 
-    // MFA is impossible or doesn't make much sense
+    // MFA is impossible or inefficient
     if (N < 4  ||  N*SIZE < 256*1024)
     {
         IterativeNTT<T,P> (data, N, SIZE, root_ptr);
@@ -548,17 +548,16 @@ void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
             IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);
         TransposeMatrix (data, R, C);
 
-        // 2. Multiply each matrix element (index r,c) by *roots ** (r*c)
+        // 2. Multiply each matrix element (index r,c) by roots[0] ** (r*c)
         #pragma omp for
         for (int r=1; r<R; r++) {
-            T root_r = root_arr[r];
-            T root_c = root_r;
+            T root_c = root_arr[r];                             // roots[0] ** r
             for (size_t c=1; c<C; c++) {
-                T* block = data[r*C+c];
+                T* __restrict__ block = data[r*C+c];
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
                     block[k] = GF_Mul<T,P> (block[k], root_c);
                 }
-                root_c = GF_Mul<T,P> (root_c, root_r);          // next root of power N/R
+                root_c = GF_Mul<T,P> (root_c, root_arr[r]);     // roots[0] ** r*c for the next c
             }
         }
 
@@ -711,4 +710,4 @@ int main (int argc, char **argv)
 // "b N SIZE" in cmdline
 // ntt32*.exe/GF_Mul32 doesn't work with 65537, probably due to hardcoded assumptions about P in GF_Mul32
 // replace "(res>X)*P" in GF_Sub with bit arithmetics
-// MS GF_Mul64 should be faster with the same algo as GCC one
+// MS GF_Mul64 should became faster with the same algo as GCC one
