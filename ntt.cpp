@@ -542,11 +542,11 @@ void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
     #pragma omp parallel
     {
         // 1. Apply a (length R) FFT on each column
-        TransposeMatrix (data, C, R);
+        TransposeMatrix (data, R, C);
         #pragma omp for
         for (int64_t i=0; i<N; i+=R)
             IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);
-        TransposeMatrix (data, R, C);
+        TransposeMatrix (data, C, R);
 
         // 2. Multiply each matrix element (index r,c) by roots[0] ** (r*c)
         #pragma omp for
