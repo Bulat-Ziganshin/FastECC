@@ -462,7 +462,7 @@ void Rec_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
 #if defined(_OPENMP) && (_OPENMP < 200805)
         const size_t S = N/16;  // optimized for OpenMP 2.0 - do as much work as possible in the parallelized for loop
 #else
-        const size_t S = 1 << int(logb (99000/(SIZE*sizeof(T)) ));    // otherwise stay in L2 cache
+        const size_t S = 1 << int(logb (99000/(SIZE*sizeof(T)) ));    // otherwise stay in L2 cache (usually at least 256 KB / 2 threads minus memory lost due to only 4/8-associative hashing)
 #endif
         #pragma omp for
         for (ptrdiff_t i=0; i<N; i+=S)
