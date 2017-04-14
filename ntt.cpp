@@ -484,7 +484,7 @@ void IterativeNTT (T** data, size_t N, size_t SIZE, T* root_ptr)
 }
 
 
-// Matrix transpose
+// Transpose matrix R*C (rows*columns) into matrix C*R
 template <typename T>
 void TransposeMatrix (T* data, size_t R, size_t C)
 {
@@ -542,7 +542,7 @@ void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
     #pragma omp parallel
     {
         // 1. Apply a (length R) FFT on each column
-        TransposeMatrix (data, R, C);
+        TransposeMatrix (data, C, R);
         #pragma omp for
         for (int64_t i=0; i<N; i+=R)
             IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);
