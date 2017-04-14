@@ -465,7 +465,7 @@ void Rec_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
         const size_t S = 1 << int(logb (99000/(SIZE*sizeof(T)) ));    // otherwise stay in L2 cache
 #endif
         #pragma omp for
-        for (int64_t i=0; i<N; i+=S)
+        for (ptrdiff_t i=0; i<N; i+=S)
             IterativeNTT_Steps<T,P> (data+i, 1, S, SIZE, root_ptr);
 
         // Larger N values are processed recursively
@@ -544,7 +544,7 @@ void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
         // 1. Apply a (length R) FFT on each column
         TransposeMatrix (data, R, C);
         #pragma omp for
-        for (int64_t i=0; i<N; i+=R)
+        for (ptrdiff_t i=0; i<N; i+=R)
             IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);
         TransposeMatrix (data, C, R);
 
@@ -563,7 +563,7 @@ void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
 
         // 3. Apply a (length C) FFT on each row
         #pragma omp for
-        for (int64_t i=0; i<N; i+=C)
+        for (ptrdiff_t i=0; i<N; i+=C)
             IterativeNTT<T,P> (data+i, C, SIZE, root_ptr);
 
         // 4. Transpose the matrix by transposing block pointers in the data[]
