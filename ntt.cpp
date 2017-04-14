@@ -628,7 +628,7 @@ uint32_t hash (T** data, size_t N, size_t SIZE)
 
 // Benchmark and verify two NTT implementations: Rec_NTT() & MFA_NTT(), compare results to definitive Slow_NTT()
 template <typename T, T P>
-void BenchNTT (bool RunMFA, bool RunCanonical, size_t N, size_t SIZE)
+void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE)
 {
     T *data0 = new T[N*SIZE];
     for (size_t i=0; i<N*SIZE; i++)
@@ -643,18 +643,18 @@ void BenchNTT (bool RunMFA, bool RunCanonical, size_t N, size_t SIZE)
     char title[99];
     for (int i=64; i--; )
         if (T(1)<<i == N)
-            sprintf (title, "%s<2^%d,%.0lf>", RunCanonical?"Slow_NTT":RunMFA?"MFA_NTT":"Rec_NTT", i, SIZE*1.0*sizeof(T));
+            sprintf (title, "%s<2^%d,%.0lf>", RunCanonical?"Slow_NTT":RunOld?"MFA_NTT":"Rec_NTT", i, SIZE*1.0*sizeof(T));
 
     if (RunCanonical) time_it (N*SIZE*sizeof(T), title, [&]{Slow_NTT<T,P> (N, SIZE, data0,false);});
-    else if (RunMFA)  time_it (N*SIZE*sizeof(T), title, [&]{MFA_NTT <T,P> (N, SIZE, data, false);});
-    else              time_it (N*SIZE*sizeof(T), title, [&]{Rec_NTT <T,P> (N, SIZE, data, false);});
+    else if (RunOld)  time_it (N*SIZE*sizeof(T), title, [&]{Rec_NTT <T,P> (N, SIZE, data, false);});
+    else              time_it (N*SIZE*sizeof(T), title, [&]{MFA_NTT <T,P> (N, SIZE, data, false);});
 
     uint32_t hash1 = hash(data, N, SIZE);    // hash after NTT
 
     // Inverse NTT
     if (RunCanonical) Slow_NTT<T,P> (N, SIZE, data0,true);
-    else if (RunMFA)  MFA_NTT <T,P> (N, SIZE, data, true);
-    else              Rec_NTT <T,P> (N, SIZE, data, true);
+    else if (RunOld)  Rec_NTT <T,P> (N, SIZE, data, true);
+    else              MFA_NTT <T,P> (N, SIZE, data, true);
 
     // Normalize the result by dividing by N
     T inv_N = GF_Inv<T,P>(N);
@@ -689,7 +689,7 @@ void Code (int argc, char **argv)
     if (argc>=4)  SIZE = atoi(argv[3]);
 
     assert(N<P);  // Too long NTT for the such small P
-    BenchNTT<T,P> (opt=='n', opt=='s', N, SIZE/sizeof(T));
+    BenchNTT<T,P> (opt=='o', opt=='s', N, SIZE/sizeof(T));
 }
 
 // Deal with '=' argv[1] prefix: switch to P=0x10001
