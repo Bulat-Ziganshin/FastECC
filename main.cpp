@@ -59,15 +59,16 @@ void FindRoot (T N)
     int cnt = 0;
     for (T i=2; i<P; i++)
     {
-        std::cout << "\r" << i << "**" << std::hex << N << std::dec << "...";
+        if (i<256 || (i%(1024*1024))==0)
+            std::cout << "\r" << i << "**" << std::hex << N << std::dec << "...";
         T q = GF_Pow<T,P> (i,N);
         if (q==1)
         {
-            assert (P==0xFFF00001 || P==0x10001);
 
-            if (P==0x10001) {
+            if (P==0x10001 || P==0xFFFFFFFF) {
                 if (1 == GF_Pow<T,P> (i,N/2))  goto next;
             } else {
+                assert (P==0xFFF00001);  // other P aren' supported
                 if (1 == GF_Pow<T,P> (i,N/2) ||
                     1 == GF_Pow<T,P> (i,N/3) ||
                     1 == GF_Pow<T,P> (i,N/5) ||
@@ -273,7 +274,7 @@ void Code (int argc, char **argv)
     char opt  =  (argc>=2?  argv[1][0] : ' ');
     if (opt=='i')  {Test_GF_Inv<T,P>();  return;}
     if (opt=='m')  {Test_GF_Mul<T,P>();  return;}
-    if (opt=='r')  {FindRoot<T,P>(P-1);  printf ("GF_Root %s\n", GF_Root<T,P>(2)==P-1? "OK": "failed");  return;}
+    if (opt=='r')  {FindRoot<T,P>(P==0xFFFFFFFF?65536:P-1);  printf ("GF_Root %s\n", GF_Root<T,P>(2)==P-1? "OK": "failed");  return;}
     if (opt=='d')  {DividersDensity<T,P>();  return;}
     if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return;}
 
@@ -288,13 +289,17 @@ void Code (int argc, char **argv)
     BenchNTT<T,P> (opt=='o', opt=='s', N, SIZE/sizeof(T));
 }
 
-// Deal with '=' argv[1] prefix: switch to P=0x10001
+// Deal with argv[1] prefix:
+//   '=': switch to P=0x10001
+//   '-': switch to P=0xFFFFFFFF (not a primary number!)
 int main (int argc, char **argv)
 {
-    if (argc>=2 && argv[1][0]=='=')
-    {
+    if (argc>=2 && argv[1][0]=='=') {
         argv[1]++;
         Code <uint32_t,0x10001> (argc, argv);
+    } else if (argc>=2 && argv[1][0]=='-') {
+        argv[1]++;
+        Code <uint32_t,0xFFFFFFFF> (argc, argv);
     } else {
         Code <uint32_t,0xFFF00001> (argc, argv);
     }

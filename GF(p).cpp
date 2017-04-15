@@ -139,6 +139,25 @@ template <> uint32_t GF_Mul<uint32_t,0x10001> (uint32_t X, uint32_t Y)
 }
 
 
+// Optimized operations for P=0xFFFFFFFF
+// Note: finally data should be normalized, i.e. 0xFFFFFFFF mapped to 0
+template <> uint32_t GF_Add<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
+{
+    uint64_t res = uint64_t(X)+Y;
+    return uint32_t(res) + uint32_t(res>>32);
+}
+template <> uint32_t GF_Sub<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
+{
+    return GF_Add<uint32_t,0xFFFFFFFF> (X,~Y);
+}
+template <> uint32_t GF_Mul<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
+{
+    uint64_t res = uint64_t(X) * Y;
+    res = (res&0xFFFFFFFF) + (res>>32);
+    return uint32_t(res) + uint32_t(res>>32);
+}
+
+
 template <typename T, T P>
 T GF_Pow (T X, T N)
 {
@@ -161,6 +180,12 @@ T GF_Root (T N)
 
     assert ((P-1) % N  ==  0);
     return GF_Pow<T,P> (main_root, (P-1) / N);
+}
+template <> uint32_t GF_Root<uint32_t,0xFFFFFFFF> (uint32_t N)
+{
+    uint32_t main_root = 7;  // root of power 65536 in the GF(P)
+    assert (65536 % N  ==  0);
+    return GF_Pow<uint32_t,0xFFFFFFFF> (main_root, 65536 / N);
 }
 
 
