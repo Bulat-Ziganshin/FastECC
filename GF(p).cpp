@@ -114,9 +114,18 @@ T GF_Mul32 (T X, T Y)
 #define GF_Mul GF_Mul32
 #endif
 
-// GF_Mul optimized for P=65537
-template <>
-uint32_t GF_Mul<uint32_t,0x10001> (uint32_t X, uint32_t Y)
+// Optimized operations for P=0x10001
+template <> uint32_t GF_Add<uint32_t,0x10001> (uint32_t X, uint32_t Y)
+{
+    uint32_t res = X+Y;
+    return res - (res>0x10001)*0x10001;   // res>P? res-P : res
+}
+template <> uint32_t GF_Sub<uint32_t,0x10001> (uint32_t X, uint32_t Y)
+{
+    uint32_t res = X-Y;
+    return res + (res<0)*0x10001;   // res<0? res+P : res
+}
+template <> uint32_t GF_Mul<uint32_t,0x10001> (uint32_t X, uint32_t Y)
 {
     uint32_t res = X*Y;
     if (unlikely(res==0) && X && Y)
