@@ -5,6 +5,67 @@
 
 
 /***********************************************************************************************************************
+*** Small-order NTT codelets *******************************************************************************************
+************************************************************************************************************************/
+
+// Perform N order-2 NTTs
+template <typename T, T P>
+void NTT2 (T** data, size_t N, size_t SIZE)
+{
+    for (size_t i=0; i<N; i++)
+    {
+        T* __restrict__ block1 = data[i];
+        T* __restrict__ block2 = data[i+N];
+        for (size_t k=0; k<SIZE; k++)         // cycle over SIZE elements of the single block
+        {
+            T u = block1[k];
+            T v = block2[k];
+            block1[k] = GF_Add<T,P> (u, v);
+            block2[k] = GF_Sub<T,P> (u, v);
+        }
+    }
+}
+
+
+// Perform N order-3 NTTs
+template <typename T, T P, bool InvNTT>
+void NTT3 (T** data, size_t N, size_t SIZE)
+{
+    static T root    = GF_Root<T,P> (3);
+    static T root1   = InvNTT? GF_Inv<T,P>(root) : root;
+    static T root2   = GF_Mul <T,P> (root1, root1);
+    static T const_1 = GF_Div <T,P> (GF_Add <T,P> (root1, root2), 2);
+    static T const_2 = GF_Div <T,P> (GF_Sub <T,P> (root1, root2), 2);
+
+    for (size_t i=0; i<N; i++)
+    {
+        T* __restrict__ block0 = data[i];
+        T* __restrict__ block1 = data[i+N];
+        T* __restrict__ block2 = data[i+2*N];
+
+        for (size_t k=0; k<SIZE; k++)         // cycle over SIZE elements of the single block
+        {
+            T f0 = block0[k];
+            T f1 = block1[k];
+            T f2 = block2[k];
+
+            T u = GF_Add<T,P> (f1, f2);       // u = f1+f2
+            T v = GF_Sub<T,P> (f1, f2);       // v = f1-f2
+
+            block0[k] = GF_Add<T,P> (f0, u);  // f0 := f0+f1+f2
+
+            u = GF_Mul<T,P> (u, const_1);     // u*(X+Y)/2,  X**3==1, Y==X**2
+            v = GF_Mul<T,P> (v, const_2);     // v*(X-Y)/2
+            u = GF_Add<T,P> (f0, u);          // f0 + u*(X+Y)/2
+
+            block1[k] = GF_Add<T,P> (u, v);   // f1 := f0 + u*(X+Y)/2 + v*(X-Y)/2
+            block2[k] = GF_Sub<T,P> (u, v);   // f2 := f0 + u*(X+Y)/2 - v*(X-Y)/2
+        }
+    }
+}
+
+
+/***********************************************************************************************************************
 *** NTT steps **********************************************************************************************************
 ************************************************************************************************************************/
 

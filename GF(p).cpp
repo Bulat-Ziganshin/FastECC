@@ -143,3 +143,11 @@ T GF_Inv (T X)
 {
     return GF_Pow<T,P> (X, P-2);
 }
+
+
+template <typename T, T P>
+T GF_Div (T X, T Y)
+{
+    T InvY = GF_Inv<T,P> (Y);
+    return GF_Mul<T,P> (X, InvY);
+}
