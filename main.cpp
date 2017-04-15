@@ -308,12 +308,10 @@ int main (int argc, char **argv)
     return 0;
 }
 
-// MS: both P have the same speed, GCC: 65537 is 10% faster
 // to do:
 // "b N SIZE" in cmdline
 // ntt32*.exe/GF_Mul32 doesn't work with 65537, probably due to hardcoded assumptions about P in GF_Mul32
-// replace "(res>X)*P" in GF_Sub with bit arithmetics
+// replace "(res>X)*P" in GF_Sub with bit arithmetics (compiler can do it itself?)
 // MS GF_Mul64 should became faster with the same algo as GCC one
 // MFA_NTT: recursively split data into <=512 KB blocks
 // IterativeNTT_Steps: optional extra twiddle factors in the last cycle so we can avoid them in MFA_NTT
-// GF<2^32-1> should be the fastest one: keep data quasi-normalized, i.e. full 32-bit values in 64-bit variables

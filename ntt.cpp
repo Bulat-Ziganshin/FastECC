@@ -324,9 +324,24 @@ void Slow_NTT (size_t N, size_t SIZE, T* data, bool InvNTT)
             outdata[i*SIZE+k] = t;
         }
 
-        dw = GF_Mul<T,P> (dw, root);      // next root of power N
+        dw = GF_Mul<T,P> (dw, root);    // next root of power N
     }
 
     memcpy (data, outdata, N*SIZE*sizeof(T));
     delete[] outdata;
 }
+
+
+#if NEVER
+// Generic driver handling any orders
+template <typename T, T P>
+void Generic_NTT (size_t N, size_t SIZE, T* data, bool InvNTT)
+{
+    R = max. 2^n power of N
+    C = N/R
+    Employ PFA with R*C elements
+    0. fill roots[] with unity roots starting with root**R==1
+    1. MFA_NTT handles R-sized NTTs
+    2. PFA_NTT handles C-sized NTTs
+}
+#endif

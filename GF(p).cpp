@@ -23,7 +23,7 @@ template <typename T, T P>
 T GF_Sub (T X, T Y)
 {
     T res = X - Y;
-    return res + (res>X)*P;   // res<=X? res : res+P
+    return res + (res>X)*P;   // res>X? res+P : res
 }
 
 template <typename T, T P>
