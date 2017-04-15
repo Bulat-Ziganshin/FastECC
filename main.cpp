@@ -309,3 +309,4 @@ int main (int argc, char **argv)
 // MS GF_Mul64 should became faster with the same algo as GCC one
 // MFA_NTT: recursively split data into <=512 KB blocks
 // IterativeNTT_Steps: optional extra twiddle factors in the last cycle so we can avoid them in MFA_NTT
+// GF<2^32-1> should be the fastest one: keep data quasi-normalized, i.e. full 32-bit values in 64-bit variables
