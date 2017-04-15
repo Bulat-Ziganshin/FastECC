@@ -76,7 +76,6 @@ double get_KB(int byte)
 typedef uint32_t ElementT;        // data items type, 32-bit unsigned integer for GF(P) computations with P>65536
 typedef uint64_t DoubleElementT;  // twice wider type to hold intermediate results
 
-
 template <typename T, T P>
 ElementT GF_Add (ElementT X, ElementT Y)
 {
@@ -91,21 +90,20 @@ ElementT GF_Sub (ElementT X, ElementT Y)
     return res + (res>X)*P;   // res<=X? res : res+P
 }
 
-// GF_Mul64 is optimized for 64-bit CPUs
-template <ElementT P>
-ElementT GF_Mul (ElementT X, ElementT Y)
+template <typename T, T P>
+ElementT GF_Mul (T X, T Y)
 {
-    return ElementT( (DoubleElementT(X)*Y) % P);
+    return T( (DoubleElementT(X)*Y) % P);
 }
 
 template <typename T, T P>
-ElementT GF_Pow (T X, size_t N)
+ElementT GF_Pow (T X, T N)
 {
     T res = 1;
     for ( ; N; N/=2)
     {
-        if (N&1)  res = GF_Mul<P> (res,X);
-        X = GF_Mul<P> (X,X);
+        if (N&1)  res = GF_Mul<T,P> (res,X);
+        X = GF_Mul<T,P> (X,X);
     }
     return res;
 }
@@ -120,16 +118,14 @@ ElementT GF_Inv (T X)
 
 #define GF ((1<<16)+1)
 
-int *log, *exp, *inv;
-
 int inline field_mult(unsigned int a, unsigned int b)
 {
-    return GF_Mul<GF>(a,b);
+    return GF_Mul<ElementT,GF>(a,b);
 }
 
 int inline field_mult_no(unsigned int a, unsigned int b)
 {
-    return GF_Mul<GF>(a,b);
+    return GF_Mul<ElementT,GF>(a,b);
 }
 
 int inline field_diff(unsigned int a, unsigned int b)
@@ -143,32 +139,30 @@ int inline field_sum(unsigned int a, unsigned int b)
 }
 
 
+int *exp, *inv;
+
+template <typename T, T P>
 void init_field()
 {
-    log = (int *) malloc(sizeof(int) * GF);
-    exp = (int *) malloc(sizeof(int) * GF);
-    inv = (int *) malloc(sizeof(int) * GF);
+    exp = (int *) malloc(sizeof(int) * P);
+    inv = (int *) malloc(sizeof(int) * P);
 
-    int p = 1;
-    int i;
-    for (i=0; i+1<GF; i++) {
+    T p = 1;
+    for (T i=0; i+1<P; i++) {
         exp[i]=p;
-        log[p]=i;
-        p = GF_Mul<GF>(3,p);
+        p = GF_Mul<T,P>(3,p);
     }
-    exp[GF-1]=1;
-    log[0]=0;
+    exp[P-1]=1;
 
-    for (i=0; i<GF; i++) {
-        inv[i] = GF_Inv<ElementT,GF>(i);
+    for (T i=0; i<P; i++) {
+        inv[i] = GF_Inv<T,P>(i);
     }
     inv[0]=0;
     inv[1]=1;
 
     //test
-    for (i=0; i<GF; i++) {
+    for (T i=0; i<P; i++) {
         if (field_mult(i, inv[i]) != 1) printf("%d ",i);
-        if (exp[log[i]]!=i) printf("%d ", i);
     }
     printf("\n");
 }
@@ -291,14 +285,15 @@ void (*ifft)(int *, int) = ifft_inc;
 //*********************************************************************
 //*********************************************************************
 
+template <typename T, T P>
 void compute_prod(int *prod, int *pos, int k, int n)
 {
     int x,i;
     for (x=0; x<n; x++) {
-        long long t=1;
+        T t=1;
         for (i=0; i<k; i++) {
             if (x!=pos[i])
-                t = field_mult(t, field_diff(x,pos[i]));
+                t = GF_Mul<T,P> (t, GF_Sub<T,P>(x,pos[i]));
         }
         prod[x]=t;
     }
@@ -312,6 +307,7 @@ int *inv_fft;
 int *enc_fft;
 int *prod_enc;
 
+template <typename T, T P>
 void init_code(int n)
 {
     temp = (int *) malloc(sizeof(int) * n * 2);
@@ -321,16 +317,17 @@ void init_code(int n)
 
     int x;
     for (x=0; x<n; x++) {
-        inv_fft[x]=inv[x];
-        enc_fft[x]=inv[x];
-        if (x>0) inv_fft[2*n-x]=inv[GF-x];
+        inv_fft[x]=GF_Inv<T,P>(x);
+        enc_fft[x]=GF_Inv<T,P>(x);
+        if (x>0)
+            inv_fft[2*n-x] = GF_Inv<T,P> (GF_Sub<T,P> (0,x));
     }
     fft(inv_fft,2*n);
     fft(enc_fft,n);
     for (x=0; x<n; x++) {
-        inv_fft[x] = field_mult(inv_fft[x],inv[2*n]);
-        inv_fft[n+x] = field_mult(inv_fft[n+x],inv[2*n]);
-        enc_fft[x] = field_mult(enc_fft[x],inv[n]);
+        inv_fft[x]   = GF_Mul<T,P> (inv_fft[x],   GF_Inv<T,P>(2*n));
+        inv_fft[n+x] = GF_Mul<T,P> (inv_fft[n+x], GF_Inv<T,P>(2*n));
+        enc_fft[x]   = GF_Mul<T,P> (enc_fft[x],   GF_Inv<T,P>(n));
     }
     prod_enc = (int *) malloc(sizeof(int) * n);
 }
@@ -340,6 +337,7 @@ void init_code(int n)
 
 // field_mult_no work here ?!
 // means not both are -1 in all multiplication...
+template <typename T, T P>
 void encode(int *dst, int *src, int k, int n)
 {
     int x,i;
@@ -352,18 +350,19 @@ void encode(int *dst, int *src, int k, int n)
     // convolve with inverse function
     fft(temp,n);
     for (x=0; x<n; x++)
-        temp[x] = field_mult(temp[x], enc_fft[x]);
+        temp[x] = GF_Mul<T,P>(temp[x], enc_fft[x]);
     ifft(temp,n);
 
     // multiply by prod[x] the parity positions
     for (x=k; x<n; x++) {
-        dst[x] = field_mult(temp[x], prod_enc[x]);
+        dst[x] = GF_Mul<T,P>(temp[x], prod_enc[x]);
     }
 
     // put systematic symbol in place
     for (i=0; i<k; i++) dst[i]=src[i];
 }
 
+template <typename T, T P>
 void decode(int *dst, int *src, int *pos, int k, int n)
 {
     int i;
@@ -372,17 +371,17 @@ void decode(int *dst, int *src, int *pos, int k, int n)
     // put received packet in place
     // divide by prod[pos[i]]
     for (i=0; i<2*n; i++) temp[i]=0;
-    for (i=0; i<k; i++) temp[pos[i]] = field_mult(src[i], inv[prod[pos[i]]]);
+    for (i=0; i<k; i++) temp[pos[i]] = GF_Mul<T,P>(src[i], inv[prod[pos[i]]]);
 
     // convolve with inverse function
     fft_rec_special(temp,2*n);
     for (i=0; i<2*n; i++)
-        temp[i] = field_mult(temp[i], inv_fft[i]);
+        temp[i] = GF_Mul<T,P>(temp[i], inv_fft[i]);
     ifft_rec_special(temp,2*n);
 
     // multiply by prod[i]
     for (i=0; i<k; i++)
-        dst[i] = field_mult(temp[i], prod[i]);
+        dst[i] = GF_Mul<T,P>(temp[i], prod[i]);
 
     // replace received position by the correct symbol
     for (i=0; i<k; i++)
@@ -391,7 +390,8 @@ void decode(int *dst, int *src, int *pos, int k, int n)
 }
 
 
-int main(int argc, char *argv[])
+template <typename T, T P>
+int test(int argc, char *argv[])
 {
     int i,j,n;
     clock_t tick;
@@ -427,8 +427,8 @@ int main(int argc, char *argv[])
     tick  = clock();
 
     // code init
-    init_field();
-    init_code(N);
+    init_field<T,P>();
+    init_code <T,P>(N);
 
     // memory for the full message
     int *positions = (int *)malloc(sizeof(int)*K*nb_bloc);
@@ -458,7 +458,7 @@ int main(int argc, char *argv[])
     // for encoding
     int *kpos=(int *)malloc(sizeof(int)*K);
     for(i=0; i<K; i++) kpos[i] = i;
-    compute_prod(prod_enc, kpos, K, N);
+    compute_prod<T,P> (prod_enc, kpos, K, N);
 
     // end of initialisation
     tick = clock() - tick;
@@ -478,7 +478,7 @@ int main(int argc, char *argv[])
         int *sys = message + n*K;
         int *rec = received + n*K;
 
-        encode(codeword, sys, K, N);
+        encode<T,P> (codeword, sys, K, N);
 
         // simulate errors...
         for (i=0; i<K; i++) rec[i] = codeword[pos[i]];
@@ -497,13 +497,13 @@ int main(int argc, char *argv[])
 
     double syst=0;
 
-    compute_prod(prod, pos, K, N);
+    compute_prod<T,P> (prod, pos, K, N);
     for (n=0; n<nb_bloc; n++)
     {
         // current bloc
         int *rec = received + n*K;
 
-        decode(codeword, rec, pos, K, N);
+        decode<T,P> (codeword, rec, pos, K, N);
 
         // put result back into received
         for (i=0; i<K; i++) {
@@ -534,4 +534,9 @@ int main(int argc, char *argv[])
 
     // end;
     return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    return test<ElementT,GF>(argc,argv);
 }
