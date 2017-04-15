@@ -224,6 +224,8 @@ uint32_t hash (T** data, size_t N, size_t SIZE)
 template <typename T, T P>
 void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE)
 {
+    bool RunNTT3  =  (N%3 == 0);
+
     T *data0 = new T[N*SIZE];
     for (size_t i=0; i<N*SIZE; i++)
         data0[i] = i%P;
@@ -240,7 +242,7 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE)
         if (T(1)<<i == N)
             sprintf (title, "%s<2^%d,%.0lf>", RunCanonical?"Slow_NTT":RunOld?"Rec_NTT":"MFA_NTT", i, SIZE*1.0*sizeof(T));
 
-         if (N%3==0)       time_it (N*SIZE*sizeof(T), title, [&]{NTT3<T,P,false> (data, N/3, SIZE);});
+         if (RunNTT3)      time_it (N*SIZE*sizeof(T), title, [&]{NTT3<T,P,false> (data, N/3, SIZE);});
     else if (RunCanonical) time_it (N*SIZE*sizeof(T), title, [&]{Slow_NTT<T,P> (N, SIZE, data0,false);});
     else if (RunOld)       time_it (N*SIZE*sizeof(T), title, [&]{Rec_NTT <T,P> (N, SIZE, data, false);});
     else                   time_it (N*SIZE*sizeof(T), title, [&]{MFA_NTT <T,P> (N, SIZE, data, false);});
@@ -248,15 +250,15 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE)
     uint32_t hash1 = hash(data, N, SIZE);    // hash after NTT
 
     // Inverse NTT
-         if (N%3==0)       NTT3<T,P,true>(data, N/3, SIZE);
+         if (RunNTT3)      NTT3<T,P,true>(data, N/3, SIZE);
     else if (RunCanonical) Slow_NTT<T,P> (N, SIZE, data0,true);
     else if (RunOld)       Rec_NTT <T,P> (N, SIZE, data, true);
     else                   MFA_NTT <T,P> (N, SIZE, data, true);
 
     // Normalize the result by dividing by N
-    T inv_N = GF_Inv<T,P>(N%3==0? 3 : N);
+    T inv_N = GF_Inv<T,P>(RunNTT3? 3 : N);
     for (size_t i=0; i<N*SIZE; i++)
-        data0[i] = GF_Mul<T,P> (data0[i], inv_N);
+        data0[i] = GF_Normalize<T,P> (GF_Mul<T,P> (data0[i], inv_N));
 
     // Now we should have exactly the input data
     uint32_t hash2 = hash(data, N, SIZE);    // hash after NTT+iNTT

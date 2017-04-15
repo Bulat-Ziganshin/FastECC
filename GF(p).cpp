@@ -139,6 +139,7 @@ template <> uint32_t GF_Mul<uint32_t,0x10001> (uint32_t X, uint32_t Y)
 }
 
 
+#if 1
 // Optimized operations for P=0xFFFFFFFF
 // Note: finally data should be normalized, i.e. 0xFFFFFFFF mapped to 0
 template <> uint32_t GF_Add<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
@@ -156,6 +157,7 @@ template <> uint32_t GF_Mul<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
     res = (res&0xFFFFFFFF) + (res>>32);
     return uint32_t(res) + uint32_t(res>>32);
 }
+#endif
 
 
 template <typename T, T P>
@@ -192,7 +194,7 @@ template <> uint32_t GF_Root<uint32_t,0xFFFFFFFF> (uint32_t N)
 template <typename T, T P>
 T GF_Inv (T X)
 {
-    return GF_Pow<T,P> (X, P-2);
+    return GF_Pow<T,P> (X, P==0xFFFFFFFF? 0xFFFF : P-2);
 }
 
 
@@ -201,4 +203,13 @@ T GF_Div (T X, T Y)
 {
     T InvY = GF_Inv<T,P> (Y);
     return GF_Mul<T,P> (X, InvY);
+}
+
+
+// Normalize value, i.e. return X%P
+// Required after optimized operations with P=0xFFFFFFFF
+template <typename T, T P>
+T GF_Normalize (T X)
+{
+    return X % P;
 }
