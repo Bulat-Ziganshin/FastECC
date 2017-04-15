@@ -7,6 +7,8 @@
 #define MY_CPU_64BIT
 #endif
 
+#define unlikely /* to do... */
+
 
 /***********************************************************************************************************************
 *** GF(P) **************************************************************************************************************
@@ -111,6 +113,21 @@ T GF_Mul32 (T X, T Y)
 #else
 #define GF_Mul GF_Mul32
 #endif
+
+// GF_Mul optimized for P=65537
+template <>
+uint32_t GF_Mul<uint32_t,0x10001> (uint32_t X, uint32_t Y)
+{
+    uint32_t res = X*Y;
+    if (unlikely(res==0) && X && Y)
+        return 1;  // 65536*65536
+    res = (res&0xFFFF) - (res>>16);
+#ifdef MY_CPU_64BIT
+    return res + (int32_t(res)<0)*0x10001;        // faster for gcc64
+#else
+    return int32_t(res)<0? res+0x10001 : res;     // faster for gcc32
+#endif
+}
 
 
 template <typename T, T P>

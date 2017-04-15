@@ -223,7 +223,6 @@ uint32_t hash (T** data, size_t N, size_t SIZE)
 template <typename T, T P>
 void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE)
 {
-N=3*1234567;
     T *data0 = new T[N*SIZE];
     for (size_t i=0; i<N*SIZE; i++)
         data0[i] = i%P;
@@ -238,7 +237,7 @@ N=3*1234567;
     sprintf (title, "NTT3<3*%.0lf,%.0lf>", N/3.0, SIZE*1.0*sizeof(T));
     for (int i=64; i--; )
         if (T(1)<<i == N)
-            sprintf (title, "%s<2^%d,%.0lf>", RunCanonical?"Slow_NTT":RunOld?"MFA_NTT":"Rec_NTT", i, SIZE*1.0*sizeof(T));
+            sprintf (title, "%s<2^%d,%.0lf>", RunCanonical?"Slow_NTT":RunOld?"Rec_NTT":"MFA_NTT", i, SIZE*1.0*sizeof(T));
 
          if (N%3==0)       time_it (N*SIZE*sizeof(T), title, [&]{NTT3<T,P,false> (data, N/3, SIZE);});
     else if (RunCanonical) time_it (N*SIZE*sizeof(T), title, [&]{Slow_NTT<T,P> (N, SIZE, data0,false);});
@@ -308,3 +307,5 @@ int main (int argc, char **argv)
 // ntt32*.exe/GF_Mul32 doesn't work with 65537, probably due to hardcoded assumptions about P in GF_Mul32
 // replace "(res>X)*P" in GF_Sub with bit arithmetics
 // MS GF_Mul64 should became faster with the same algo as GCC one
+// MFA_NTT: recursively split data into <=512 KB blocks
+// IterativeNTT_Steps: optional extra twiddle factors in the last cycle so we can avoid them in MFA_NTT
