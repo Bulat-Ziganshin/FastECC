@@ -22,11 +22,11 @@ __forceinline void NTT2 (T& __restrict__ f0, T& __restrict__ f1)
 template <typename T, T P, bool InvNTT>
 __forceinline void NTT3 (T& __restrict__ f0, T& __restrict__ f1, T& __restrict__ f2)
 {
-    static T root    = GF_Root<T,P> (3);
-    static T root1   = InvNTT? GF_Inv<T,P>(root) : root;
-    static T root2   = GF_Mul <T,P> (root1, root1);
-    static T const_1 = GF_Div <T,P> (GF_Add <T,P> (root1, root2), 2);
-    static T const_2 = GF_Div <T,P> (GF_Sub <T,P> (root1, root2), 2);
+    static constexpr T root    = GF_Root<T,P> (3);
+    static constexpr T root1   = InvNTT? GF_Inv<T,P>(root) : root;
+    static constexpr T root2   = GF_Mul <T,P> (root1, root1);
+    static constexpr T const_1 = GF_Div <T,P> (GF_Add <T,P> (root1, root2), 2);
+    static constexpr T const_2 = GF_Div <T,P> (GF_Sub <T,P> (root1, root2), 2);
 
     T u = GF_Add<T,P> (f1, f2);     // u = f1+f2
     T v = GF_Sub<T,P> (f1, f2);     // v = f1-f2

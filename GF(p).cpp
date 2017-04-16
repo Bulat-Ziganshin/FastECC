@@ -7,6 +7,10 @@
 #define MY_CPU_64BIT
 #endif
 
+#if _MSC_VER && defined(MY_CPU_64BIT)
+#define constexpr  /* incompatible with __umulh :( */
+#endif
+
 #define unlikely /* to do... */
 
 
@@ -20,14 +24,14 @@ template<>              struct Double<uint32_t> {typedef uint64_t T;};
 
 
 template <typename T, T P>
-T GF_Sub (T X, T Y)
+constexpr T GF_Sub (T X, T Y)
 {
     T res = X - Y;
     return res + (res>X)*P;   // res>X? res+P : res
 }
 
 template <typename T, T P>
-T GF_Add (T X, T Y)
+constexpr T GF_Add (T X, T Y)
 {
     return GF_Sub<T,P> (X, P-Y);
 }
@@ -50,7 +54,7 @@ static constexpr int trunc_log2 (T x)
 {return x<=1? 0 : 1+trunc_log2(x/2);}
 
 template <typename T, T P>
-T GF_Mul64 (T X, T Y)
+constexpr T GF_Mul64 (T X, T Y)
 {
     using DoubleT = typename Double<T>::T;
     using QuadT   = typename Quadruple<T>::T;
@@ -71,11 +75,11 @@ T GF_Mul64 (T X, T Y)
 #include <intrin.h>
 
 template <typename T, T P>
-T GF_Mul64 (T X, T Y)
+constexpr T GF_Mul64 (T X, T Y)
 {
     using DoubleT = typename Double<T>::T;
-    DoubleT estInvP = ((DoubleT(1)<<63) / P) << 1;
-    DoubleT invP    = (estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);
+    constexpr DoubleT estInvP = ((DoubleT(1)<<63) / P) << 1;
+    constexpr DoubleT invP    = (estInvP*P > (estInvP+1)*P? estInvP : estInvP+1);
 
     DoubleT res = DoubleT(X)*Y;
     res -= __umulh(res,invP) * P;
@@ -86,7 +90,7 @@ T GF_Mul64 (T X, T Y)
 
 // GF_Mul64 is optimized for 64-bit CPUs
 template <typename T, T P>
-T GF_Mul64 (T X, T Y)
+constexpr T GF_Mul64 (T X, T Y)
 {
     using DoubleT = typename Double<T>::T;
     return T((DoubleT(X)*Y) % P);
@@ -96,7 +100,7 @@ T GF_Mul64 (T X, T Y)
 
 // GF_Mul32 is optimized for 32-bit CPUs, SIMD and GPUs
 template <typename T, T P>
-T GF_Mul32 (T X, T Y)
+constexpr T GF_Mul32 (T X, T Y)
 {
     using DoubleT = typename Double<T>::T;
     // invP32 := (2**64)/P - 2**32  :  if 2**31<P<2**32, then 2**32 < (2**64)/P < 2**33, and invP32 is a 32-bit value
@@ -115,17 +119,17 @@ T GF_Mul32 (T X, T Y)
 #endif
 
 // Optimized operations for P=0x10001
-template <> uint32_t GF_Add<uint32_t,0x10001> (uint32_t X, uint32_t Y)
+template <> constexpr uint32_t GF_Add<uint32_t,0x10001> (uint32_t X, uint32_t Y)
 {
     uint32_t res = X+Y;
     return res - (res>=0x10001)*0x10001;   // res>P? res-P : res
 }
-template <> uint32_t GF_Sub<uint32_t,0x10001> (uint32_t X, uint32_t Y)
+template <> constexpr uint32_t GF_Sub<uint32_t,0x10001> (uint32_t X, uint32_t Y)
 {
     uint32_t res = X-Y;
     return res + (int32_t(res)<0)*0x10001;   // res<0? res+P : res
 }
-template <> uint32_t GF_Mul<uint32_t,0x10001> (uint32_t X, uint32_t Y)
+template <> constexpr uint32_t GF_Mul<uint32_t,0x10001> (uint32_t X, uint32_t Y)
 {
     uint32_t res = X*Y;
     if (unlikely(res==0) && X && Y)
@@ -142,16 +146,16 @@ template <> uint32_t GF_Mul<uint32_t,0x10001> (uint32_t X, uint32_t Y)
 #if 1
 // Optimized operations for P=0xFFFFFFFF
 // Note: finally data should be normalized, i.e. 0xFFFFFFFF mapped to 0
-template <> uint32_t GF_Add<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
+template <> constexpr uint32_t GF_Add<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
 {
     uint64_t res = uint64_t(X)+Y;
     return uint32_t(res) + uint32_t(res>>32);
 }
-template <> uint32_t GF_Sub<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
+template <> constexpr uint32_t GF_Sub<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
 {
     return GF_Add<uint32_t,0xFFFFFFFF> (X,~Y);
 }
-template <> uint32_t GF_Mul<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
+template <> constexpr uint32_t GF_Mul<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
 {
     uint64_t res = uint64_t(X) * Y;
     res = (res&0xFFFFFFFF) + (res>>32);
@@ -161,7 +165,7 @@ template <> uint32_t GF_Mul<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
 
 
 template <typename T, T P>
-T GF_Pow (T X, T N)
+constexpr T GF_Pow (T X, T N)
 {
     T res = 1;
     for ( ; N; N/=2)
@@ -175,31 +179,31 @@ T GF_Pow (T X, T N)
 
 // Some primary root of 1 of power N
 template <typename T, T P>
-T GF_Root (T N)
+constexpr T GF_Root (T N)
 {
-    assert (P==0xFFF00001 || P==0x10001);
+    static_assert (P==0xFFF00001 || P==0x10001, "Only GF(0xFFF00001) and GF(0x10001) are supported by generic GF_Root");
     T main_root  =  (P==0x10001? 3 : 19);  // root of power P-1 in the GF(P)
 
-    assert ((P-1) % N  ==  0);
+    //assert ((P-1) % N  ==  0);
     return GF_Pow<T,P> (main_root, (P-1) / N);
 }
-template <> uint32_t GF_Root<uint32_t,0xFFFFFFFF> (uint32_t N)
+template <> constexpr uint32_t GF_Root<uint32_t,0xFFFFFFFF> (uint32_t N)
 {
     uint32_t main_root = 7;  // root of power 65536 in Z/mZ(0xFFFFFFFF)
-    assert (65536 % N  ==  0);
+    //assert (65536 % N  ==  0);
     return GF_Pow<uint32_t,0xFFFFFFFF> (main_root, 65536 / N);
 }
 
 
 template <typename T, T P>
-T GF_Inv (T X)
+constexpr T GF_Inv (T X)
 {
     return GF_Pow<T,P> (X, P==0xFFFFFFFF? 0xFFFF : P-2);
 }
 
 
 template <typename T, T P>
-T GF_Div (T X, T Y)
+constexpr T GF_Div (T X, T Y)
 {
     T InvY = GF_Inv<T,P> (Y);
     return GF_Mul<T,P> (X, InvY);
@@ -209,7 +213,7 @@ T GF_Div (T X, T Y)
 // Normalize value, i.e. return X%P
 // Required after optimized operations with P=0xFFFFFFFF
 template <typename T, T P>
-T GF_Normalize (T X)
+constexpr T GF_Normalize (T X)
 {
     return X % P;
 }
