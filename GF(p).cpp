@@ -185,7 +185,7 @@ T GF_Root (T N)
 }
 template <> uint32_t GF_Root<uint32_t,0xFFFFFFFF> (uint32_t N)
 {
-    uint32_t main_root = 7;  // root of power 65536 in the GF(P)
+    uint32_t main_root = 7;  // root of power 65536 in Z/mZ(0xFFFFFFFF)
     assert (65536 % N  ==  0);
     return GF_Pow<uint32_t,0xFFFFFFFF> (main_root, 65536 / N);
 }
