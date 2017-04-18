@@ -16,7 +16,7 @@
 #include "NTT.cpp"
 
 
-// Benchmark encoding using the ReedSolomon algo
+// Benchmark encoding using the Reed-Solomon algo
 template <typename T, T P>
 void EncodeReedSolomon (size_t N, size_t SIZE)
 {
@@ -29,21 +29,21 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
         data[i] = data0 + i*SIZE;
 
     char title[99];
-    sprintf (title, "ReedSolomon encoding <2^%d,%d>", 20/*lb(N)*/, int(SIZE*sizeof(T)));
+    sprintf (title, "Reed-Solomon encoding (2^%.0lf + 2^%.0lf src+ecc blocks %.0lf bytes each)", logb(N), logb(N), SIZE*1.0*sizeof(T));
 
     time_it (2*N*SIZE*sizeof(T), title, [&]
     {
         // 1. iNTT: polynom interpolation. We find coefficients of order-N polynom describing the source data
         MFA_NTT <T,P> (N, SIZE, data, false);
 
-        // Now we can evaluate the polynom in 2*N points.
+        // Now we can evaluate the polynom at 2*N points.
         // Points with even index will contain the source data,
         // while points with odd indexes may be used as ECC data.
         // But more efficient approach is to compute only odd-indexed points.
-        // This is accomplished by the following algo:
+        // This is accomplished by the following steps:
 
         // 2. Multiply the polynom coefficents by root(2*N)**i
-        T root = GF_Root<T,P>(N);
+        T root = GF_Root<T,P>(2*N);
         T root_i = root;                            // root**1
         #pragma omp parallel for
         for (ptrdiff_t i=1; i<N; i++) {
@@ -55,7 +55,7 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
         }
 
         // 3. NTT: polynom evaluation. This evaluates the modified polynom at root(N)**i points,
-        // that is equivalent to evaluating the original polynom at root(2*N)**(2*i+1) points.
+        // equivalent to evaluation of the original polynom at root(2*N)**(2*i+1) points.
         MFA_NTT <T,P> (N, SIZE, data, true);
 
         // Further optimization: in order to compute only even-indexed points,
@@ -65,8 +65,8 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
 
 int main (int argc, char **argv)
 {
-    size_t N = 1<<20;   // NTT order
-    size_t SIZE = 512;  // Block size, in bytes
+    size_t N = 1<<19;   // NTT order
+    size_t SIZE = 1024; // Block size, in bytes
                         // 512 MB total
 
     if (argc>=2)  N = 1<<atoi(argv[1]);
