@@ -34,7 +34,7 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
     time_it (2*N*SIZE*sizeof(T), title, [&]
     {
         // 1. iNTT: polynom interpolation. We find coefficients of order-N polynom describing the source data
-        MFA_NTT <T,P> (N, SIZE, data, false);
+        MFA_NTT <T,P> (N, SIZE, data, true);
 
         // Now we can evaluate the polynom at 2*N points.
         // Points with even index will contain the source data,
@@ -56,7 +56,7 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
 
         // 3. NTT: polynom evaluation. This evaluates the modified polynom at root(N)**i points,
         // equivalent to evaluation of the original polynom at root(2*N)**(2*i+1) points.
-        MFA_NTT <T,P> (N, SIZE, data, true);
+        MFA_NTT <T,P> (N, SIZE, data, false);
 
         // Further optimization: in order to compute only even-indexed points,
         // it's enough to compute order-N/2 NTT of data[i]+data[i+N/2]. And so on...
