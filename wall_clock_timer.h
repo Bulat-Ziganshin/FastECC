@@ -46,7 +46,7 @@ void StartTimer()
 #endif
 }
 
-// time elapsed in ms
+// Elapsed time, milliseconds
 double GetTimer()
 {
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
@@ -70,3 +70,18 @@ void GetProcessKernelUserTimes (double *KernelTime, double *UserTime)
     *UserTime   = !ok? -1 : ((((unsigned long long)(ut.dwHighDateTime) << 32) + ut.dwLowDateTime)) / 1e7;
 }
 #endif // TIMER_H
+
+void time_it (int64_t size, const char* name, std::function<void()> Code)
+{
+    static int _ = (StartTimer(),0);
+    double start = GetTimer(), KernelTime[2], UserTime[2];
+    GetProcessKernelUserTimes (KernelTime, UserTime);
+    Code();
+    GetProcessKernelUserTimes (KernelTime+1, UserTime+1);
+    double wall_time = GetTimer()-start;
+    double cpu_time  = (UserTime[1] - UserTime[0]) * 1000;
+    printf("%s: %.0lf ms = %.0lf MiB/s,  cpu %.0lf ms = %.0lf%%,  os %.0lf ms\n",
+        name, wall_time, (size / wall_time)*1000 / (1<<20),
+        cpu_time, cpu_time/wall_time*100,
+        (KernelTime[1]-KernelTime[0])*1000);
+}

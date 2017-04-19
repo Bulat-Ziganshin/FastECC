@@ -16,22 +16,6 @@
 #include "NTT.cpp"
 
 
-void time_it (int64_t size, const char* name, std::function<void()> Code)
-{
-    static int _ = (StartTimer(),0);
-    double start = GetTimer(), KernelTime[2], UserTime[2];
-    GetProcessKernelUserTimes (KernelTime, UserTime);
-    Code();
-    GetProcessKernelUserTimes (KernelTime+1, UserTime+1);
-    double wall_time = GetTimer()-start;
-    double cpu_time  = (UserTime[1] - UserTime[0]) * 1000;
-    printf("%s: %.0lf ms = %.0lf MiB/s,  cpu %.0lf ms = %.0lf%%,  os %.0lf ms\n",
-        name, wall_time, (size / wall_time)*1000 / (1<<20),
-        cpu_time, cpu_time/wall_time*100,
-        (KernelTime[1]-KernelTime[0])*1000);
-}
-
-
 /***********************************************************************************************************************
 *** Testing/benchmarking routines **************************************************************************************
 ************************************************************************************************************************/
@@ -308,10 +292,24 @@ int main (int argc, char **argv)
     return 0;
 }
 
-// to do:
-// "b N SIZE" in cmdline
-// ntt32*.exe/GF_Mul32 doesn't work with 65537, probably due to hardcoded assumptions about P in GF_Mul32
-// replace "(res>X)*P" in GF_Sub with bit arithmetics (compiler can do it itself?)
-// MS GF_Mul64 should became faster with the same algo as GCC one
-// MFA_NTT: recursively split data into <=512 KB blocks
-// IterativeNTT_Steps: optional extra twiddle factors in the last cycle so we can avoid them in MFA_NTT
+/* to do:
+"b N SIZE" in cmdline
+ntt32*.exe/GF_Mul32 doesn't work with 65537, probably due to hardcoded assumptions about P in GF_Mul32
+replace "(res>X)*P" in GF_Sub with bit arithmetics (compiler can do it itself?)
+MS GF_Mul64 should became faster with the same algo as GCC one
+MFA_NTT: recursively split data into <=512 KB blocks
+IterativeNTT_Steps: optional extra twiddle factors in the last cycle so we can avoid them in MFA_NTT
+
+Order Multiplications
+2     0
+3     2
+4     1
+5     6
+6     4
+7     14
+8     5 (4 with handmade code avoiding *-1)
+9     16
+12    11
+13    34
+16    17 (14 with handmade code)
+*/
