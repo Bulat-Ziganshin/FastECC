@@ -41,6 +41,7 @@ Now the best possible performance of Reed-Solomon encoding is 600 MB/s on i7-477
 It can be reached with 2^16 source blocks and 2^16 ECC blocks, each 4 KB large,
 i.e. encoding 256 MB of source data into 256 MB of ECC data, which will be processed in 0.8 seconds.
 
+With current implementation, maximum performance is reached only when all of the following conditions are met:
 - Block size >= 4 KB. Smaller block sizes means more cache misses, it can be avoided only by careful prefetching.
 - Overall data size limited to ~500 MB, processing larger datasizes are up to 1.5x slower. Efficient processing of larger data sizes will require
 [Large Pages](https://msdn.microsoft.com/en-us/library/windows/desktop/aa366720(v=vs.85).aspx) support.
