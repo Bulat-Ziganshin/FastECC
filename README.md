@@ -2,18 +2,19 @@ FastECC will provide O(N*log(N)) Reed-Solomon coder, running at the speed around
 Version 0.1 implements only encoding, so it isn't yet ready for real use.
 
 Additional info:
-- [NTT: Number-theoretic transform](NTT.md): what one need to know in order to implement N*logN Reed-Solomon error-correction codes
+- [NTT: Number-theoretic transform](NTT.md): what one need to know in order to implement O(N*log(N)) Reed-Solomon error-correction codes
 - [Benchmarks](bench.txt)
+
 
 ### Program usage
 
-prime N - check whether N is prime, print divisors of N, and search, starting at N+1, for prime numbers as well as numbers only with small divisors
+`prime N` - check whether N is prime, print divisors of N, and search, starting at N+1, for prime numbers as well as numbers only with small divisors
 
-RS [N=19 [SIZE=1024]] - benchmark NTT-based Reed-Solomon encoding using 2^N input (source) blocks and 2^N output (ECC) blocks, each block SIZE bytes long
+`RS [N=19 [SIZE=1024]]` - benchmark NTT-based Reed-Solomon encoding using 2^N input (source) blocks and 2^N output (ECC) blocks, each block SIZE bytes long
 
 ---
 
-NTT [=|-][i|r|m|d|b|s|o|n] [N=20 [SIZE=512]] - test/benchmark GF(p) and NTT implementation
+`NTT [=|-][i|r|m|d|b|s|o|n] [N=20 [SIZE=512]]` - test/benchmark GF(p) and NTT implementation
 
 First argument is one of chars "irmdbson", optionally prefixed with "=" or "-" (character "n" may be omitted). Remaining arguments are used only for options "son".
 
@@ -43,7 +44,7 @@ i.e. encoding 256 MB of source data into 256 MB of ECC data, which will be proce
 
 With current implementation, maximum performance is reached only when all of the following conditions are met:
 - Block size >= 4 KB. Smaller block sizes means more cache misses, it can be avoided only by careful prefetching.
-- Overall data size limited to ~500 MB, processing larger datasizes are up to 1.5x slower. Efficient processing of larger data sizes will require
+- Overall data size limited to ~500 MB, processing larger datasizes are up to 1.5x slower. Efficient processing of larger datasizes will require
 [Large Pages](https://msdn.microsoft.com/en-us/library/windows/desktop/aa366720(v=vs.85).aspx) support.
 - Number of source blocks is 2^N. Current implementation supports only NTT of orders 2^N, so number of blocks is rounded up to the next 2^N value, thus making real performance up to 2x lower.
 We need to implement PFA NTT as well as NTT kernels of orders 3,5,7,9,13 (since `0xFFF00000 = 2^20*3*3*5*7*13`) in order to get efficient support of arbitrary block counts.
@@ -62,3 +63,24 @@ Since this base is already supported by underlying GF(p).cpp library, required c
 and post-process ECC blocks with GF_Normalize prior to writing.
 
 
+### Lucky number: choosing a proper base for computations
+
+Since GF(2^n) doesn't have roots of unity, NTT-based Reed-Solomon codes implementation can't perform computations in this field.
+Instead, we need to use other Galois Fields, or even rings modulo some number. GF(p^n) has a maximal order of p^n-1.
+For rings, the maximal order formula is more complex and provided in chapter "39.7 Composite modulus: the ring Z=mZ" of [FxtBook](http://www.jjj.de/fxt/fxtbook.pdf).
+
+Good candidates for the base have a form p=2^a+b where b is a small positive or negative number,
+Such bases allow efficient radix conversion from/to 2^a (see below).
+And computations became more efficient when b=1 and especially when b=-1.
+
+Good base candidates are:
+- GF(0xFFF00001) - my current favourite. `0xFFF00000 = 2^20*3*3*5*7*13`, it has 504 divisors overall, and for random N there is a divisor that is only a few percents larger.
+This means that when we need to process N source blocks, we can perform NTT using only a few percents more memory than the source data occupy. Source blocks up to 4 KB
+can be converted into 1024 numbers in the 0..0xFFF00000 range plus a single bit.
+- GF(0x10001) - computations are 30% faster, but NTT order may be only 2,4..65536.
+Compact memory storage require to recode data into base-0x10000 plus one overflow bit per 32K values, that may slowdown the NTT operation.
+- GF(0x10001^2) - somewhat faster than GF(0xFFF00001), maximal NTT order is `0x10001^2-1 = 2^17*3*3*11*331`, the same storage problems.
+- Mod(0xFFFFFFFF) - 2.5x faster, but NTT order may be only 2,4..65536. May be used as fast algorithm for block counts equal to 2^N or slightly lower, for N<=16.
+- GF(0x7FFFFFFF) - also 2.5x faster, max. order is large, but its divisors `0x7FFFFFFE = 2*3*3*7*11*31*151*331` doesn't look fascinating.
+- GF(0x7FFFFFFF^2) - 2x faster, max order `0x7FFFFFFF^2-1 = 2^32*3*3*7*11*31*151*331` so the divisors are almost as dense as for GF(0xFFF00001).
+It may be the best base, but the implementation will require a lot of extra work.
