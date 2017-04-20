@@ -10,7 +10,7 @@ RS [N=19 [SIZE=1024]] - benchmark NTT-based Reed-Solomon encoding using 2^N inpu
 
 ---
 
-main [=|-][i|r|m|d|b|s|o|n] [N=20 [SIZE=512]] - test/benchmark GF(p) and NTT implementation
+NTT [=|-][i|r|m|d|b|s|o|n] [N=20 [SIZE=512]] - test/benchmark GF(p) and NTT implementation
 
 First argument is one of chars "irmdbson", optionally prefixed with "=" or "-" (character "n" may be omitted). Remaining arguments are used only for options "son".
 
@@ -29,5 +29,30 @@ The remainder of the first option is interpreted as following:
 - n: benchmark new, faster MFA-based NTT implementation
 
 NTT algorithms are performed using 2^N blocks SIZE bytes each. By default, N=20 and SIZE=512, these values can be overwritten in cmdline.
-For every NTT, inverse operation is also performed and program verifies whether NTT+iNTT results are equivalent to original data.
+For every NTT, inverse operation is also performed and program verifies that NTT+iNTT results are equivalent to original data.
 
+
+### Performance
+
+Now best possible performance of Reed-Solomon encoding is 600 MB/s using ALL cores of i7-4770.
+It can be reached f.e. with 2^16 source blocks and 2^16 ECC blocks, each 4 KB large,
+i.e. 256 MB of source data and 256 MB of ECC data - it will be processed in 1 second.
+
+In current implementation, maximum performance is reached only for the following conditions:
+- Block size >= 4 KB. Smaller block sizes means more cache misses, it can be avoided only by careful prefetching.
+- Overall data size limited to ~500 MB, processing larger datasizes are up to 1.5x slower. Efficient processing of larger data sizes will require 
+[Large Pages](https://msdn.microsoft.com/en-us/library/windows/desktop/aa366720(v=vs.85).aspx) support.
+- Number of source blocks is 2^N. Current implementation supports only NTT of orders 2^N, so number of blocks is rounded up to the next 2^N value, thus making real performance up to 2x lower.
+We need to implement PFA NTT as well as NTT kernels of orders 3,5,7,9,13 (since `0xFFF00000 = 2^20*3*3*5*7*13`) in order to get efficient support of arbitrary block counts. 
+0xFFF00000 has 504 dividers, so for random N the next divider of 0xFFF00000 is only a few percents larger than N itself.
+- Number of ECC blocks (M) is equal to the number of source blocks (N). Current implementation performs backward transform (from N polynom coefficients to ECC block values)
+using order-N NTT, even if M is much smaller than N, so backward transform always takes the same time as the forward one, making its effective speed N/M times lower.
+But when M<=N/2, it's possible to compute only even points of the second transform, thus halving the execution time - we just need to perform a[i]+=a[i+N/2] and then run NTT on the first N/2 points.
+When M<=N/4, we can compute only 1/4 of all points and so on, effectively running at the same effective speed as the first transform.
+- Current MFA implementation is slightly inefficent. Ideally, it should split data into blocks of 512 KB or smaller (fitting into L3 cache even with m/t processing), 
+so the overall processing will require only 2-3 passes over memory.
+
+If the final program version will implement all the features mentioned, it will run at 10/logb(block count) GB/s with SSE2, and twice as fast with AVX2 - for ANY source+ECC configuration.
+
+The speed can be further doubled by using computations modulo 2^32-1, but this ring supports only NTT of orders 2,4...65536.
+Since it's already supported by underlying GF(p).cpp library, required changes are trivial - replace 0xFFF00001 with 0xFFFFFFFF and process data with GF_Normalize prior to writing.

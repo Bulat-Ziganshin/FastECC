@@ -9,7 +9,7 @@ Global Time  = 18257.312 = 05:04:17.312 = 100%
 
 
 
-C:\!FreeArc\public\FastECC>timer ntt64g.exe x 20 32
+C:\!FreeArc\public\FastECC>timer ntt64g.exe o 20 32
 Rec_NTT<2^20,32>: 365 ms = 88 MiB/s,  cpu 1388 ms = 380%,  os 0 ms
 Verified! Original 2679569933,  after NTT: 1187104119
 
@@ -36,7 +36,7 @@ GF(0xFFF00001):
 C:\!FreeArc\public\FastECC>ntt64g.exe o 16 8192
 Rec_NTT<2^16,8192>: 3467 ms = 148 MiB/s,  cpu 3432 ms = 99%,  os 0 ms
 Verified!  Original 4053815590,  after NTT: 3321235535
-C:\!FreeArc\public\FastECC>ntt64g.exe x 16 8192
+C:\!FreeArc\public\FastECC>ntt64g.exe n 16 8192
 MFA_NTT<2^16,8192>: 3122 ms = 164 MiB/s,  cpu 3089 ms = 99%,  os 0 ms
 Verified!  Original 4053815590,  after NTT: 3321235535
 C:\!FreeArc\public\FastECC>ntt64g.exe b
@@ -45,7 +45,7 @@ Butterfly: 3955 ms = 2589 MiB/s,  cpu 3931 ms = 99%,  os 0 ms
 C:\!FreeArc\public\FastECC>ntt32g.exe o 16 8192
 Rec_NTT<2^16,8192>: 5349 ms = 96 MiB/s,  cpu 5320 ms = 99%,  os 0 ms
 Verified!  Original 4053815590,  after NTT: 3321235535
-C:\!FreeArc\public\FastECC>ntt32g.exe x 16 8192
+C:\!FreeArc\public\FastECC>ntt32g.exe n 16 8192
 MFA_NTT<2^16,8192>: 4623 ms = 111 MiB/s,  cpu 4571 ms = 99%,  os 0 ms
 Verified!  Original 4053815590,  after NTT: 3321235535
 C:\!FreeArc\public\FastECC>ntt32g.exe b
@@ -57,7 +57,7 @@ GF(0x10001), real results are 2x slower since we process 32-bit words with essen
 C:\!FreeArc\public\FastECC>ntt64g.exe =o 16 8192
 Rec_NTT<2^16,8192>: 1380 ms = 371 MiB/s,  cpu 1388 ms = 101%,  os 0 ms
 Verified!  Original 1807322693,  after NTT: 4193637393
-C:\!FreeArc\public\FastECC>ntt64g.exe = 16 8192
+C:\!FreeArc\public\FastECC>ntt64g.exe =n 16 8192
 MFA_NTT<2^16,8192>: 1312 ms = 390 MiB/s,  cpu 1295 ms = 99%,  os 0 ms
 Verified!  Original 1807322693,  after NTT: 4193637393
 C:\!FreeArc\public\FastECC>ntt64g.exe =b
@@ -66,7 +66,7 @@ Butterfly: 1493 ms = 6857 MiB/s,  cpu 1482 ms = 99%,  os 0 ms              = 2.6
 C:\!FreeArc\public\FastECC>ntt32g.exe =o 16 8192
 Rec_NTT<2^16,8192>: 3709 ms = 138 MiB/s,  cpu 3619 ms = 98%,  os 0 ms
 Verified!  Original 1807322693,  after NTT: 4193637393
-C:\!FreeArc\public\FastECC>ntt32g.exe = 16 8192
+C:\!FreeArc\public\FastECC>ntt32g.exe =n 16 8192
 MFA_NTT<2^16,8192>: 3691 ms = 139 MiB/s,  cpu 3604 ms = 98%,  os 0 ms
 Verified!  Original 1807322693,  after NTT: 4193637393
 C:\!FreeArc\public\FastECC>ntt32g.exe =b
