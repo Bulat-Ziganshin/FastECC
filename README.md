@@ -1,4 +1,7 @@
-More info:
+FastECC will provide O(N*log(N)) Reed-Solomon coder, running at the speed around 1 GB/s with 2^20 blocks.
+Version 0.1 implements only encoding, so it isn't yet ready for real use.
+
+Additional info:
 - [NTT: Number-theoretic transform](NTT.md): what one need to know in order to implement N*logN Reed-Solomon error-correction codes
 - [Benchmarks](bench.txt)
 
@@ -34,25 +37,27 @@ For every NTT, inverse operation is also performed and program verifies that NTT
 
 ### Performance
 
-Now best possible performance of Reed-Solomon encoding is 600 MB/s using ALL cores of i7-4770.
-It can be reached f.e. with 2^16 source blocks and 2^16 ECC blocks, each 4 KB large,
-i.e. 256 MB of source data and 256 MB of ECC data - it will be processed in 1 second.
+Now the best possible performance of Reed-Solomon encoding is 600 MB/s on i7-4770 using ALL cores.
+It can be reached with 2^16 source blocks and 2^16 ECC blocks, each 4 KB large,
+i.e. encoding 256 MB of source data into 256 MB of ECC data, which will be processed in 0.8 seconds.
 
-In current implementation, maximum performance is reached only for the following conditions:
 - Block size >= 4 KB. Smaller block sizes means more cache misses, it can be avoided only by careful prefetching.
-- Overall data size limited to ~500 MB, processing larger datasizes are up to 1.5x slower. Efficient processing of larger data sizes will require 
+- Overall data size limited to ~500 MB, processing larger datasizes are up to 1.5x slower. Efficient processing of larger data sizes will require
 [Large Pages](https://msdn.microsoft.com/en-us/library/windows/desktop/aa366720(v=vs.85).aspx) support.
 - Number of source blocks is 2^N. Current implementation supports only NTT of orders 2^N, so number of blocks is rounded up to the next 2^N value, thus making real performance up to 2x lower.
-We need to implement PFA NTT as well as NTT kernels of orders 3,5,7,9,13 (since `0xFFF00000 = 2^20*3*3*5*7*13`) in order to get efficient support of arbitrary block counts. 
+We need to implement PFA NTT as well as NTT kernels of orders 3,5,7,9,13 (since `0xFFF00000 = 2^20*3*3*5*7*13`) in order to get efficient support of arbitrary block counts.
 0xFFF00000 has 504 dividers, so for random N the next divider of 0xFFF00000 is only a few percents larger than N itself.
 - Number of ECC blocks (M) is equal to the number of source blocks (N). Current implementation performs backward transform (from N polynom coefficients to ECC block values)
 using order-N NTT, even if M is much smaller than N, so backward transform always takes the same time as the forward one, making its effective speed N/M times lower.
 But when M<=N/2, it's possible to compute only even points of the second transform, thus halving the execution time - we just need to perform a[i]+=a[i+N/2] and then run NTT on the first N/2 points.
 When M<=N/4, we can compute only 1/4 of all points and so on, effectively running at the same effective speed as the first transform.
-- Current MFA implementation is slightly inefficent. Ideally, it should split data into blocks of 512 KB or smaller (fitting into L3 cache even with m/t processing), 
-so the overall processing will require only 2-3 passes over memory.
+- Current MFA implementation is slightly inefficent. Ideally, it should split data into blocks of 512 KB or smaller (fitting into L3 cache even with m/t processing),
+so the entire processing will require only 2-3 passes over memory.
 
-If the final program version will implement all the features mentioned, it will run at 10/logb(block count) GB/s with SSE2, and twice as fast with AVX2 - for ANY source+ECC configuration.
+If the final program version will implement all the features mentioned, it will run at 10/logb(N) GB/s with SSE2, and twice as fast with AVX2 - for ANY source+ECC configuration.
 
 The speed can be further doubled by using computations modulo 2^32-1, but this ring supports only NTT of orders 2,4...65536.
-Since it's already supported by underlying GF(p).cpp library, required changes are trivial - replace 0xFFF00001 with 0xFFFFFFFF and process data with GF_Normalize prior to writing.
+Since this base is already supported by underlying GF(p).cpp library, required changes in RS.cpp are trivial - replace 0xFFF00001 with 0xFFFFFFFF
+and post-process ECC blocks with GF_Normalize prior to writing.
+
+
