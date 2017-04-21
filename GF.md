@@ -1,4 +1,9 @@
 
+### Program usage
+
+`prime N` - check whether N is prime, print divisors of N, and search, starting at N+1, for prime numbers as well as numbers only with small divisors
+
+
 ### Lucky number: choosing a proper base for computations
 
 Since GF(2^n) doesn't have unity roots, NTT-based Reed-Solomon codes implementation can't perform computations in this field.

@@ -7,8 +7,3 @@ Further reading:
 - [NTT.cpp: NTT implementation](NTT.md)
 - [RS.cpp: Reed-Solomon coder](RS.md)
 - [Benchmarks](bench.txt)
-
-
-### Program usage
-
-`prime N` - check whether N is prime, print divisors of N, and search, starting at N+1, for prime numbers as well as numbers only with small divisors
