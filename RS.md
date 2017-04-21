@@ -25,7 +25,7 @@ In order to allow fast decoding, the M1 points employed in the second FFT should
 
 
 
-### [Speeding up RS-encoding](https://www.livebusinesschat.com/smf/index.php?topic=5952.msg44167#msg44167)
+### [Speeding up RS-encoding (external link)](https://www.livebusinesschat.com/smf/index.php?topic=5952.msg44167#msg44167)
 
 
 ### Lacan scheme - decoding in O(N*logN)

@@ -48,3 +48,83 @@ If the final program version will implement all the features mentioned, it will 
 The speed can be further doubled by using computations modulo 2^32-1, but this ring supports only NTT of orders 2,4...65536.
 Since this base is already supported by underlying GF(p).cpp library, required changes in RS.cpp are trivial - replace 0xFFF00001 with 0xFFFFFFFF
 and post-process ECC blocks with GF_Normalize prior to writing.
+
+
+
+### Benchmarks
+
+```
+C:\!FreeArc\public\FastECC>timer ntt64g.exe s 20 32
+Slow_NTT<2^20,32>: 9123729 ms = 0 MiB/s,  cpu 60703889 ms = 665%,  os 51808 ms
+Verified! Original 2679569933,  after NTT: 1187104119
+
+Kernel Time  =   101.041 = 00:01:41.041 =   0%
+User Time    = 121412.286 = 33:43:32.286 = 665%
+Process Time = 121513.328 = 33:45:13.328 = 665%
+Global Time  = 18257.312 = 05:04:17.312 = 100%
+
+
+
+C:\!FreeArc\public\FastECC>timer ntt64g.exe o 20 32
+Rec_NTT<2^20,32>: 365 ms = 88 MiB/s,  cpu 1388 ms = 380%,  os 0 ms
+Verified! Original 2679569933,  after NTT: 1187104119
+
+Kernel Time  =     0.000 = 00:00:00.000 =   0%
+User Time    =     1.794 = 00:00:01.794 = 302%
+Process Time =     1.794 = 00:00:01.794 = 302%
+Global Time  =     0.593 = 00:00:00.593 = 100%
+
+
+
+C:\!FreeArc\public\FastECC>timer ntt64g.exe n 20 32
+MFA_NTT<2^20,32>: 159 ms = 202 MiB/s,  cpu 671 ms = 423%,  os 0 ms
+Checksum mismatch: original 2679569933,  after NTT: 2655366899,  after NTT+iNTT 489034790
+
+Kernel Time  =     0.015 = 00:00:00.015 =   3%
+User Time    =     1.700 = 00:00:01.700 = 363%
+Process Time =     1.716 = 00:00:01.716 = 366%
+Global Time  =     0.468 = 00:00:00.468 = 100%
+
+
+
+GF(0xFFF00001):
+
+C:\!FreeArc\public\FastECC>ntt64g.exe o 16 8192
+Rec_NTT<2^16,8192>: 3467 ms = 148 MiB/s,  cpu 3432 ms = 99%,  os 0 ms
+Verified!  Original 4053815590,  after NTT: 3321235535
+C:\!FreeArc\public\FastECC>ntt64g.exe n 16 8192
+MFA_NTT<2^16,8192>: 3122 ms = 164 MiB/s,  cpu 3089 ms = 99%,  os 0 ms
+Verified!  Original 4053815590,  after NTT: 3321235535
+C:\!FreeArc\public\FastECC>ntt64g.exe b
+Butterfly: 3955 ms = 2589 MiB/s,  cpu 3931 ms = 99%,  os 0 ms
+
+C:\!FreeArc\public\FastECC>ntt32g.exe o 16 8192
+Rec_NTT<2^16,8192>: 5349 ms = 96 MiB/s,  cpu 5320 ms = 99%,  os 0 ms
+Verified!  Original 4053815590,  after NTT: 3321235535
+C:\!FreeArc\public\FastECC>ntt32g.exe n 16 8192
+MFA_NTT<2^16,8192>: 4623 ms = 111 MiB/s,  cpu 4571 ms = 99%,  os 0 ms
+Verified!  Original 4053815590,  after NTT: 3321235535
+C:\!FreeArc\public\FastECC>ntt32g.exe b
+Butterfly: 6136 ms = 1669 MiB/s,  cpu 6053 ms = 99%,  os 0 ms
+
+
+GF(0x10001), real results are 2x slower since we process 32-bit words with essentially 16-bit values:
+
+C:\!FreeArc\public\FastECC>ntt64g.exe =o 16 8192
+Rec_NTT<2^16,8192>: 1380 ms = 371 MiB/s,  cpu 1388 ms = 101%,  os 0 ms
+Verified!  Original 1807322693,  after NTT: 4193637393
+C:\!FreeArc\public\FastECC>ntt64g.exe =n 16 8192
+MFA_NTT<2^16,8192>: 1312 ms = 390 MiB/s,  cpu 1295 ms = 99%,  os 0 ms
+Verified!  Original 1807322693,  after NTT: 4193637393
+C:\!FreeArc\public\FastECC>ntt64g.exe =b
+Butterfly: 1493 ms = 6857 MiB/s,  cpu 1482 ms = 99%,  os 0 ms              = 2.65x faster
+
+C:\!FreeArc\public\FastECC>ntt32g.exe =o 16 8192
+Rec_NTT<2^16,8192>: 3709 ms = 138 MiB/s,  cpu 3619 ms = 98%,  os 0 ms
+Verified!  Original 1807322693,  after NTT: 4193637393
+C:\!FreeArc\public\FastECC>ntt32g.exe =n 16 8192
+MFA_NTT<2^16,8192>: 3691 ms = 139 MiB/s,  cpu 3604 ms = 98%,  os 0 ms
+Verified!  Original 1807322693,  after NTT: 4193637393
+C:\!FreeArc\public\FastECC>ntt32g.exe =b
+Butterfly: 3832 ms = 2673 MiB/s,  cpu 3806 ms = 99%,  os 0 ms
+```
