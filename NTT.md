@@ -1,40 +1,50 @@
-What one need to know in order to implement N*logN Reed-Solomon error-correction codes
 
-# NTT implementation
+### Program usage
 
-Prerequsites:
-* [Complex arithmetic](https://en.wikipedia.org/wiki/Complex_number), in particular add/sub/mul, powers, roots and polar form
-* [Finite fields](https://en.wikipedia.org/wiki/Finite_field), with the same topics in mind
+`NTT [=|-][i|r|m|d|b|s|o|n] [N=20 [SIZE=512]]` - test/benchmark GF(p) and NTT implementation
 
-Topics:
-* [Discrete Fourier transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform)
-* [Fast Fourier transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) and in particular [Cooley–Tukey FFT algorithm](https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm) as N*logN algorithm implementing DFT
-* [Number-theoretic transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform_(general)) as modified FFT employing the same add/sub/mul operations and roots of 1, but in Galois field
+First argument is one of chars "irmdbson", optionally prefixed with "=" or "-" (character "n" may be omitted). Remaining arguments are used only for options "son".
 
-Once you grasped all these topics, you can grab some FFT implementation and convert it to NTT.
+By default, all computations are performed in GF(0xFFF00001). Prefix "=" switches to GF(0x10001), while prefix "-" switches to computations modulo 0xFFFFFFFF.
+Note that 0xFFFFFFFF (2^32-1) isn't a prime number, nevertheless it supports NTT up to order 65536, and more than 2x faster than computations in GF(0xFFF00001).
+Computations modulo 0xFFFFFFFF require normalisation (GF_Normalize call) after all computations.
 
-# NTT meaning
+The remainder of the first option is interpreted as following:
+- i: test GF(p) implementation: check that each number in GF(p) has proper inverse (this check will fail for computations modulo 0xFFFFFFFF)
+- m: test GF(p) implementation: check multiplication correctness (this check will also fail for computations modulo 0xFFFFFFFF since GF_Normalize isn't called here)
+- r: find primary root of maximum order (P-1 for primary P, 65536 for P=0xFFFFFFFF)
+- d: check divisors count and density, i.e. average "distance" to the next largest divider of the field order
+- b: benchmark Butterfly operation (i.e. `a+b*K`) on 10 GB of input data (cosidered as 1.25G of (a,b) records). This is roughly equivalent to computing NTT(2^20) over 512 MB of data
+- s: benchmark slow NTT (i.e. O(N^2) algo)
+- o: benchmark old, recursive radix-2 NTT implementation
+- n: benchmark new, faster MFA-based NTT implementation
 
-If source vector `A = (A0, A1...A[n-1])` represents polynomial `A(x) = A0 + A1*x + ... + A[n-1]*x**(n-1)`, then NTT(A,a) computes polynomial values at the points `1, a, a**2 ... a**(n-1)`, representing `n` roots of power `n` of 1 (if `a` is a primitive root of power `n` of 1). It's equivalent to multiplying vector `A` to [Vandermonde Matrix](https://en.wikipedia.org/wiki/Vandermonde_matrix) defined by these points. So, NTT converts polynom coefficients to polynom values at these specific points, and iNTT (inverse NTT) reverses this transformation. iNTT is almost the same as NTT, i.e. `iNTT(A,a) = NTT(A,-a)/n` (with an element-wise division) reverses the effect of `NTT(A,a)`.
+NTT algorithms are performed using 2^N blocks SIZE bytes each. By default, N=20 and SIZE=512, these values can be overwritten in cmdline.
+For every NTT, inverse operation is also performed and program verifies that NTT+iNTT results are equivalent to original data.
 
-This means that `NTT(A,a)` provides us the fast way to convert polynom coefficients `A` to values at `a**i` points and vice versa.
 
-# RS meaning
+### Performance
 
-The idea behind Reed-Solomon `n+k` encoding (i.e. with `n` source words and `k` ecc words) is simple: multiply source vector `A` to some fixed matrix `M[n*k]` and get resulting vector `C`. Decoding needs a mutiplication of combined vector (A,C) to inverse of combined matrix `(I,M)` where `I[n*n]` is identity matrix. Of course, the decoding required only when we lost some values in `A`, so real decoding combines alive values in `A` and `C` to vector of size `n` (if more values are alive, they are just ignored), then deletes from `(I,M)` combined matrix the `k` lines corresponding to deleted values and then mutiplies partial `(A,C)` vector of size `n` to inverse of partial `(I,M)` matrix of size `n*n`. This operation computes the original `A` vector. And of course, all computations are performed in some Galois Field to ensure that all the intermediate results still fit to some 8-32 bit word.
+Now the best possible performance of Reed-Solomon encoding is 600 MB/s on i7-4770 using ALL cores.
+It can be reached with 2^16 source blocks and 2^16 ECC blocks, each 4 KB large,
+i.e. encoding 256 MB of source data into 256 MB of ECC data, which will be processed in 0.8 seconds.
 
-Therefore, all that we need are guarantees that any `n` lines of the `(I,M)` combined matrix form a invertible matrix. If that's true, then we have an [MDS code](https://en.wikipedia.org/wiki/Erasure_code#Optimal_erasure_codes) - we can lose any `k` words and restore the original data from `n` remaining ones.
+With current implementation, maximum performance is reached only when all of the following conditions are met:
+- Block size >= 4 KB. Smaller block sizes means more cache misses, it can be avoided only by careful prefetching.
+- Overall data size limited to ~500 MB, processing larger datasizes are up to 1.5x slower. Efficient processing of larger datasizes will require
+[Large Pages](https://msdn.microsoft.com/en-us/library/windows/desktop/aa366720(v=vs.85).aspx) support.
+- Number of source blocks is 2^N. Current implementation supports only NTT of orders 2^N, so number of blocks is rounded up to the next 2^N value, thus making real performance up to 2x lower.
+We need to implement PFA NTT as well as NTT kernels of orders 3,5,7,9,13 (since `0xFFF00000 = 2^20*3*3*5*7*13`) in order to get efficient support of arbitrary block counts.
+0xFFF00000 has 504 dividers, so for random N the next divider of 0xFFF00000 is only a few percents larger than N itself.
+- Number of ECC blocks (M) is equal to the number of source blocks (N). Current implementation performs backward transform (from N polynom coefficients to ECC block values)
+using order-N NTT, even if M is much smaller than N, so backward transform always takes the same time as the forward one, making its effective speed N/M times lower.
+But when M<=N/2, it's possible to compute only even points of the second transform, thus halving the execution time - we just need to perform a[i]+=a[i+N/2] and then run NTT on the first N/2 points.
+When M<=N/4, we can compute only 1/4 of all points and so on, effectively running at the same effective speed as the first transform.
+- Current MFA implementation is slightly inefficent. Ideally, it should split data into blocks of 512 KB or smaller (fitting into L3 cache even with m/t processing),
+so the entire processing will require only 2-3 passes over memory.
 
-There are so many ways to ensure that matrices are invertible:
-* We can use [non-systematic code](https://en.wikipedia.org/wiki/Systematic_code), i.e. code where all `n+k` codes are computed rather than include `n` original and `k` computed codes. Non-systematic codes are ok, for example, for data transfer over noisy channels. So we just multiply source `A` vector by Vandermonde `(n+k)*n` matrix generated from `n+k` different `a[i]` numbers. It's guaranteed that any `n` different `a[i]` numbers form an invertible Vandermonde matrix, so we can restore from any `n` remaining words after a loss.
-* [Plank proposed](http://web.eecs.utk.edu/~plank/plank/papers/SPE-04.html) to start with Vandermonde `(n+k)*n` matrix and then apply the [Gaussian elimination](https://en.wikipedia.org/wiki/Gaussian_elimination) in order to convert it to some `(I,M)` matrix. As far as we perform this operation only once per a lot of ECC computations, we can ignore the time required by this operation.
-* PAR2 format employs `(I,V)` encoding matrix, i.e. it employs Vandermonde `k*n` matrix to compute `k` ecc words while employing the systematic code. Despite of special form of `a[i]` used in their Vandermonde matrix, the restoration matrix is sometimes non-invertible. But it seems to be a good compromise between the speed/complexity of computations and recovery strength.
-* Persicum proposed us to use the [Cauchy matrix](https://en.wikipedia.org/wiki/Cauchy_matrix) of the form `M[i,j] = 1/(n+i+j)` (and it probably was empoyed by RAR5). He said that it guarantees invertability of any `n*n` submatrix of `(I,M)`, but i have no idea whether it's true.
+If the final program version will implement all the features mentioned, it will run at 10/logb(N) GB/s with SSE2, and twice as fast with AVX2 - for ANY source+ECC configuration.
 
-# NTT for RS encoding and decoding in N*logN time
-
-The first and most obvious idea to perform RS encoding in N*logN time is to compute non-systematic code: extend `n` source words with zeroes to `n+k`, NTT them and send `n+k` words produced to the channel. We are done!
-
-This can be written as `C = V(a)*ext(A)` where `ext(A)` is a source vector `A` extended with zeroes to `n+k` elements, `C` is encoded vector to be sent to the channel, `V(a)` is Vandermonde `(n+k)*(n+k)` matix produced by powers of `a`, i.e. `(1, a, a**2 ... a**(n+k-1)` and `a` is a primitive root of 1 of power `n+k`.
-
-Converting this to systematic code means the equation `(A,C) = V(a)*X`, so `A` becomes a part of encoded word and we need to compute only remaining `C` part, and `X` is some unknown vector we have to compute.
+The speed can be further doubled by using computations modulo 2^32-1, but this ring supports only NTT of orders 2,4...65536.
+Since this base is already supported by underlying GF(p).cpp library, required changes in RS.cpp are trivial - replace 0xFFF00001 with 0xFFFFFFFF
+and post-process ECC blocks with GF_Normalize prior to writing.

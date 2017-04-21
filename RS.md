@@ -1,4 +1,9 @@
 
+### Program usage
+
+`RS [N=19 [SIZE=1024]]` - benchmark NTT-based Reed-Solomon encoding using 2^N input (source) blocks and 2^N output (ECC) blocks, each block SIZE bytes long
+
+
 ### Lacan scheme - encoding in O(N*logN)
 
 Actually, it seems that this scheme was not proposed by Plank, but anyway it was known at least since 2004.
