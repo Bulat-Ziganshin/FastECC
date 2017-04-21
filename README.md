@@ -3,6 +3,8 @@ Version 0.1 implements only encoding, so it isn't yet ready for real use.
 
 Additional info:
 - [NTT: Number-theoretic transform](NTT.md): what one needs to know in order to implement O(N*log(N)) Reed-Solomon error-correction codes
+- [GF(p).cpp: fast computations in integer rings and fields](GF.md)
+- [RS.cpp: algorithm description](RS.md)
 - [Benchmarks](bench.txt)
 
 
