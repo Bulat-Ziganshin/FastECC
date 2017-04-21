@@ -6,9 +6,7 @@
 
 ### Lacan scheme - encoding in O(N*logN)
 
-Actually, it seems that this scheme was not proposed by Plank, but anyway it was known at least since 2004.
-
-In the new scheme, we consider N input words as values at N fixed points of some polynom p(x) with order<N, and compute for ECC data values of p(x) at another M fixed points ("fixed" here means that these points depend only on N and M). It requires intermediate step of computing N polynom coefficients. We can compute polynom coefficients from values with IFFT(N) (i.e. order-N Inverse FFT), and then compute polynom values with FFT(M1) where M1>=max(N,M).
+In this scheme, we consider N input words as values at N fixed points of some polynom p(x) with order<N, and compute for ECC data values of p(x) at another M fixed points ("fixed" here means that these points depend only on N and M). It requires intermediate step of computing N polynom coefficients. We can compute polynom coefficients from values with IFFT(N) (i.e. order-N Inverse FFT), and then compute polynom values with FFT(M1) where M1>=max(N,M).
 
 But again, since we can compute (multiplicative) FFT in GF(p) only with orders dividing p-1, the actual algorithm is:
 1. Find N1>=N such that N divides p-1
