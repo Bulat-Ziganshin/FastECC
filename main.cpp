@@ -49,7 +49,7 @@ void FindRoot (T N)
         if (q==1)
         {
 
-            if (P==0x10001 || P==0xFFFFFFFF) {
+            if (P==0x10001 || P==0xFFFFFFFF || P==0xFFFFFFFFFFFFFFFF) {
                 if (1 == GF_Pow<T,P> (i,N/2))  goto next;
             } else {
                 assert (P==0xFFF00001);  // other P aren' supported
@@ -110,6 +110,11 @@ void Test_GF_Mul()
         }
     }
 }
+template <> void Test_GF_Mul<uint64_t,0xFFFFFFFFFFFFFFFF>()
+{
+    printf("Test_GF_Mul<uint64_t>: unsupported\n");
+}
+
 
 
 // Print dividers count & density
@@ -173,7 +178,7 @@ int BenchButterfly()
 {
     T x=0;
     #pragma omp parallel for
-    for (int n=0; n<1024; n++)
+    for (int n=0; n<4096/sizeof(T); n++)
     {
         const int sz = 1280;
         T a[sz], b[sz];
@@ -260,7 +265,7 @@ void Code (int argc, char **argv)
     char opt  =  (argc>=2?  argv[1][0] : ' ');
     if (opt=='i')  {Test_GF_Inv<T,P>();  return;}
     if (opt=='m')  {Test_GF_Mul<T,P>();  return;}
-    if (opt=='r')  {FindRoot<T,P>(P==0xFFFFFFFF?65536:P-1);  printf ("GF_Root %s\n", GF_Root<T,P>(2)==P-1? "OK": "failed");  return;}
+    if (opt=='r')  {FindRoot<T,P>(P==0xFFFFFFFFFFFFFFFF?(uint64_t(1)<<32):P==0xFFFFFFFF?65536:P-1);  printf ("GF_Root %s\n", GF_Root<T,P>(2)==P-1? "OK": "failed");  return;}
     if (opt=='d')  {DividersDensity<T,P>();  return;}
     if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return;}
 
@@ -286,6 +291,11 @@ int main (int argc, char **argv)
     } else if (argc>=2 && argv[1][0]=='-') {
         argv[1]++;
         Code <uint32_t,0xFFFFFFFF> (argc, argv);
+#ifdef MY_CPU_64BIT
+    } else if (argc>=2 && argv[1][0]=='+') {
+        argv[1]++;
+        Code <uint64_t,0xFFFFFFFFFFFFFFFF> (argc, argv);
+#endif        
     } else {
         Code <uint32_t,0xFFF00001> (argc, argv);
     }
@@ -299,6 +309,8 @@ replace "(res>X)*P" in GF_Sub with bit arithmetics (compiler can do it itself?)
 MS GF_Mul64 should became faster with the same algo as GCC one
 MFA_NTT: recursively split data into <=512 KB blocks
 IterativeNTT_Steps: optional extra twiddle factors in the last cycle so we can avoid them in MFA_NTT
+template<typename GF> {operators +-*^/; static constexpr const GF root3, root3_2...;}
+try to use "double" for GF(p)&Mod(p) operations, it may be faster
 
 Order Multiplications
 2     0
@@ -312,4 +324,17 @@ Order Multiplications
 12    11
 13    34
 16    17 (14 with handmade code)
+32    42 = 2*14 + 32/2-2 (MFA)
+36    73 = 4*16 + 9*1
+64    114
+65    248 = 5*34+13*6
+128   290
+130   496
+256   706
+260   1057
+512   1666
+520   2244 = 8*248+65*4
+585   3272 = 9*248+65*16
+1024  3842
+1040  4878 = 16*248+65*14
 */
