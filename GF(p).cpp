@@ -7,7 +7,11 @@
 #define MY_CPU_64BIT
 #endif
 
-#if _MSC_VER && defined(MY_CPU_64BIT)
+#if __GNUC__ && defined(MY_CPU_64BIT)
+#include <inttypes.h>
+typedef unsigned __int128 uint128_t;
+#elif _MSC_VER && defined(MY_CPU_64BIT)
+#include <intrin.h>
 #define constexpr  /* incompatible with __umulh :( */
 #endif
 
@@ -39,9 +43,6 @@ constexpr T GF_Add (T X, T Y)
 
 #if __GNUC__ && defined(MY_CPU_64BIT)
 // Alternative GF_Mul64 implementation for 64-bit GCC
-
-#include <inttypes.h>
-typedef unsigned __int128 uint128_t;
 template<>              struct Double<uint64_t>    {typedef uint128_t T;};
 
 // 4x wider type to hold intermediate MUL results
@@ -72,7 +73,6 @@ constexpr T GF_Mul64 (T X, T Y)
 
 #elif _MSC_VER && defined(MY_CPU_64BIT)
 // Alternative GF_Mul64 implementation made with MSVC intrinsics
-#include <intrin.h>
 
 template <typename T, T P>
 constexpr T GF_Mul64 (T X, T Y)
@@ -143,7 +143,6 @@ template <> constexpr uint32_t GF_Mul<uint32_t,0x10001> (uint32_t X, uint32_t Y)
 }
 
 
-#if 1
 // Optimized operations for P=0xFFFFFFFF
 // Note: finally data should be normalized, i.e. 0xFFFFFFFF mapped to 0
 template <> constexpr uint32_t GF_Add<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t Y)
@@ -160,6 +159,53 @@ template <> constexpr uint32_t GF_Mul<uint32_t,0xFFFFFFFF> (uint32_t X, uint32_t
     uint64_t res = uint64_t(X) * Y;
     res = (res&0xFFFFFFFF) + (res>>32);
     return uint32_t(res) + uint32_t(res>>32);
+}
+
+
+// Optimized operations for P=0xFFFFFFFFFFFFFFFF
+// Note: finally data should be normalized, i.e. 0xFFFFFFFFFFFFFFFF mapped to 0
+#if __GNUC__ && defined(MY_CPU_64BIT)
+
+template <> constexpr uint64_t GF_Add<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, uint64_t Y)
+{
+    uint64_t res = X+Y;
+    return res + (res<X);
+}
+template <> constexpr uint64_t GF_Sub<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, uint64_t Y)
+{
+    uint64_t res = X-Y;
+    return res - (res>X);
+}
+template <> constexpr uint64_t GF_Mul<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, uint64_t Y)
+{
+    uint128_t res = uint128_t(X) * Y;
+    uint64_t a = res,  b = res>>64;
+    uint64_t c = a+b;
+    return c + (c<a);
+}
+
+#elif _MSC_VER && defined(MY_CPU_64BIT)
+
+template <> constexpr uint64_t GF_Add<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, uint64_t Y)
+{
+    uint64_t res, temp;
+    auto carry = _addcarry_u64(0,X,Y,&temp);
+    _addcarry_u64(carry,temp,0,&res);
+    return res;
+}
+template <> constexpr uint64_t GF_Sub<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, uint64_t Y)
+{
+    uint64_t res, temp;
+    auto carry = _subborrow_u64(0,X,Y,&temp);
+    _subborrow_u64(carry,temp,0,&res);
+    return res;
+}
+template <> constexpr uint64_t GF_Mul<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, uint64_t Y)
+{
+    uint64_t a, b = _umul128(X,Y,&a), res, temp;
+    auto carry = _addcarry_u64(0,a,b,&temp);
+    _addcarry_u64(carry,temp,0,&res);
+    return res;
 }
 #endif
 
@@ -193,12 +239,20 @@ template <> constexpr uint32_t GF_Root<uint32_t,0xFFFFFFFF> (uint32_t N)
     //assert (65536 % N  ==  0);
     return GF_Pow<uint32_t,0xFFFFFFFF> (main_root, 65536 / N);
 }
+#ifdef MY_CPU_64BIT
+template <> constexpr uint64_t GF_Root<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t N)
+{
+    uint64_t main_root = 1;  // root of power 2^32 in Z/mZ(0xFFFFFFFFFFFFFFFF)
+    //assert ((uint64_t(1)<<32) % N  ==  0);
+    return GF_Pow<uint64_t,0xFFFFFFFFFFFFFFFF> (main_root, (uint64_t(1)<<32) / N);
+}
+#endif        
 
 
 template <typename T, T P>
 constexpr T GF_Inv (T X)
 {
-    return GF_Pow<T,P> (X, P==0xFFFFFFFF? 0xFFFF : P-2);
+    return GF_Pow<T,P> (X, P==0xFFFFFFFFFFFFFFFF? 0xFFFFFFFF : P==0xFFFFFFFF? 0xFFFF : P-2);
 }
 
 
@@ -211,7 +265,7 @@ constexpr T GF_Div (T X, T Y)
 
 
 // Normalize value, i.e. return X%P
-// Required after optimized operations with P=0xFFFFFFFF
+// Required after optimized operations with P=2^32-1 or 2^64-1
 template <typename T, T P>
 constexpr T GF_Normalize (T X)
 {
