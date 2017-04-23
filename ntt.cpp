@@ -42,6 +42,106 @@ __forceinline void NTT3 (T& __restrict__ f0, T& __restrict__ f1, T& __restrict__
 }
 
 
+// Perform a single order-4 NTT
+template <typename T, T P, bool InvNTT>
+__forceinline void NTT4 (T& __restrict__ f0, T& __restrict__ f1, T& __restrict__ f2, T& __restrict__ f3)
+{
+    static constexpr T root  = GF_Root<T,P> (4);
+    static constexpr T root1 = InvNTT? GF_Inv<T,P>(root) : root;
+
+    NTT2<T,P> (f0, f2);                // classic MFA algo
+    NTT2<T,P> (f1, f3);
+    f3 = GF_Mul<T,P> (f3, root1);
+    NTT2<T,P> (f0, f1);
+    NTT2<T,P> (f2, f3);
+    std::swap(f1,f2);
+}
+
+
+#if NEVER  // require NTT(roots) which can't be efficiently implemented with current GF type model
+// Perform a single order-5 NTT
+template <typename T, T P, bool InvNTT>
+__forceinline void NTT5 (T& __restrict__ f0, T& __restrict__ f1, T& __restrict__ f2, T& __restrict__ f3, T& __restrict__ f4)
+{
+    static constexpr T root  = GF_Root<T,P> (5);
+    static constexpr T root1 = InvNTT? GF_Inv<T,P>(root) : root;
+    static constexpr T root2 = GF_Mul <T,P> (root1, root1);
+    static constexpr T root3 = GF_Mul <T,P> (root2, root1);
+    static constexpr T root4 = GF_Mul <T,P> (root3, root1);
+
+    NTT4<T,P, InvNTT> (f1, f3, f4, f2);
+    // to do: NTT(roots)
+    f1 = GF_Mul <T,P> (f1, root1);
+    f2 = GF_Mul <T,P> (f1, root2);
+    f3 = GF_Mul <T,P> (f1, root3);
+    f4 = GF_Mul <T,P> (f1, root4);
+    NTT4<T,P,!InvNTT> (f1, f3, f4, f2);
+    std::swap(f2,f3);
+
+    T u = f1;
+    u = GF_Add <T,P> (u, f2);
+    u = GF_Add <T,P> (u, f3);
+    u = GF_Add <T,P> (u, f4);
+
+    f1 = GF_Add <T,P> (f0, f1);
+    f2 = GF_Add <T,P> (f0, f2);
+    f3 = GF_Add <T,P> (f0, f3);
+    f4 = GF_Add <T,P> (f0, f4);
+    f0 = GF_Add <T,P> (f0, u);
+}
+#endif
+
+
+// Perform a single order-6 NTT
+template <typename T, T P, bool InvNTT>
+__forceinline void NTT6 (T& __restrict__ f0, T& __restrict__ f1, T& __restrict__ f2,
+                         T& __restrict__ f3, T& __restrict__ f4, T& __restrict__ f5)
+{
+    NTT3<T,P,InvNTT> (f0, f2, f4);
+    NTT3<T,P,InvNTT> (f3, f5, f1);
+
+    NTT2<T,P> (f0, f3);
+    NTT2<T,P> (f2, f5);
+    NTT2<T,P> (f4, f1);
+}
+
+
+// Perform a single order-9 NTT
+template <typename T, T P, bool InvNTT>
+__forceinline void NTT9 (T& __restrict__ f0, T& __restrict__ f1, T& __restrict__ f2,
+                         T& __restrict__ f3, T& __restrict__ f4, T& __restrict__ f5,
+                         T& __restrict__ f6, T& __restrict__ f7, T& __restrict__ f8)
+{
+    static constexpr T root  = GF_Root<T,P> (9);
+    static constexpr T root1 = InvNTT? GF_Inv<T,P>(root) : root;
+    static constexpr T root2 = GF_Mul <T,P> (root1, root1);
+    static constexpr T root4 = GF_Mul <T,P> (root2, root2);
+
+    // 4-step MFA on 3x3 matrix:
+
+    // 1. NTT(3) on rows
+    NTT3<T,P,InvNTT> (f0, f3, f6);
+    NTT3<T,P,InvNTT> (f1, f4, f7);
+    NTT3<T,P,InvNTT> (f2, f5, f8);
+
+    // 2. Multiply by twiddle factors
+    f4 = GF_Mul<T,P> (f4, root1);
+    f5 = GF_Mul<T,P> (f5, root2);
+    f7 = GF_Mul<T,P> (f7, root2);
+    f8 = GF_Mul<T,P> (f8, root4);
+
+    // 3. NTT(3) on columns
+    NTT3<T,P,InvNTT> (f0, f1, f2);
+    NTT3<T,P,InvNTT> (f3, f4, f5);
+    NTT3<T,P,InvNTT> (f6, f7, f8);
+
+    // 4. Transpose the matrix
+    std::swap(f1,f3);
+    std::swap(f2,f6);
+    std::swap(f5,f7);
+}
+
+
 // Perform N order-2 NTTs
 template <typename T, T P>
 void NTT2 (T** data, size_t N, size_t SIZE)
@@ -59,6 +159,49 @@ void NTT3 (T** data, size_t N, size_t SIZE)
     for (size_t i=0; i<N; i++)
         for (size_t k=0; k<SIZE; k++)         // cycle over SIZE elements of the single block
             NTT3<T,P,InvNTT> (data[i][k], data[i+N][k], data[i+2*N][k]);
+}
+
+
+// Perform N order-4 NTTs
+template <typename T, T P, bool InvNTT>
+void NTT4 (T** data, size_t N, size_t SIZE)
+{
+    for (size_t i=0; i<N; i++)
+        for (size_t k=0; k<SIZE; k++)         // cycle over SIZE elements of the single block
+            NTT4<T,P,InvNTT> (data[i][k], data[i+N][k], data[i+2*N][k], data[i+3*N][k]);
+}
+
+
+// Perform N order-5 NTTs
+template <typename T, T P, bool InvNTT>
+void NTT5 (T** data, size_t N, size_t SIZE)
+{
+    for (size_t i=0; i<N; i++)
+        for (size_t k=0; k<SIZE; k++)         // cycle over SIZE elements of the single block
+            NTT5<T,P,InvNTT> (data[i][k], data[i+N][k], data[i+2*N][k], data[i+3*N][k], data[i+4*N][k]);
+}
+
+
+// Perform N order-6 NTTs
+template <typename T, T P, bool InvNTT>
+void NTT6 (T** data, size_t N, size_t SIZE)
+{
+    for (size_t i=0; i<N; i++)
+        for (size_t k=0; k<SIZE; k++)         // cycle over SIZE elements of the single block
+            NTT6<T,P,InvNTT> (data[i    ][k], data[i+  N][k], data[i+2*N][k],
+                              data[i+3*N][k], data[i+4*N][k], data[i+5*N][k]);
+}
+
+
+// Perform N order-9 NTTs
+template <typename T, T P, bool InvNTT>
+void NTT9 (T** data, size_t N, size_t SIZE)
+{
+    for (size_t i=0; i<N; i++)
+        for (size_t k=0; k<SIZE; k++)         // cycle over SIZE elements of the single block
+            NTT9<T,P,InvNTT> (data[i    ][k], data[i+  N][k], data[i+2*N][k],
+                              data[i+3*N][k], data[i+4*N][k], data[i+5*N][k],
+                              data[i+6*N][k], data[i+7*N][k], data[i+8*N][k]);
 }
 
 
