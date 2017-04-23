@@ -242,9 +242,9 @@ template <> constexpr uint32_t GF_Root<uint32_t,0xFFFFFFFF> (uint32_t N)
 #ifdef MY_CPU_64BIT
 template <> constexpr uint64_t GF_Root<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t N)
 {
-    uint64_t main_root = 1;  // root of power 2^32 in Z/mZ(0xFFFFFFFFFFFFFFFF)
-    //assert ((uint64_t(1)<<32) % N  ==  0);
-    return GF_Pow<uint64_t,0xFFFFFFFFFFFFFFFF> (main_root, (uint64_t(1)<<32) / N);
+    uint64_t main_root = 7;  // root of power 2^16*3*5*17449 in Z/mZ(0xFFFFFFFFFFFFFFFF)
+    //assert (uint64_t(65536)*3*5*17449) % N  ==  0);
+    return GF_Pow<uint64_t,0xFFFFFFFFFFFFFFFF> (main_root, (uint64_t(65536)*3*5*17449) / N);
 }
 #endif        
 

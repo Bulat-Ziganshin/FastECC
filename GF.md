@@ -29,7 +29,7 @@ It may be the best base, but its efficient implementation will require extra wor
 - GF(p^2) for p=2^61-1 may be also interesting since it's almost as fast as GF(p) and `p^2-1 = 2^62*3*3*5*5*7*11*13*31*41*61*151*331*1321`,
 providing ideal coverage of integer space by divisors. I think that it may be 3-4x faster than GF(0xFFF00001).
 It may be the best base for x64, but its efficient implementation will require extra work.
-- Mod(2^64-1) - among fastest variants for x64, but NTT only of orders of 2,4..2^32, so using it will require more memory than the previous variant.
+- Mod(2^64-1) - among fastest variants for x64, but NTT order should be a divisor of `2^16*3*5*17449`, so it doesn't provide much choice.
 
 Intermediate data can be stored unnormalized, i.e. as arbitrary 32/64-bit value.
 Normalization required only when operation result may overflow its register size, and it can be partial - only packing the result back to the register size.

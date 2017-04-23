@@ -102,6 +102,7 @@ void Test_GF_Mul()
             using DoubleT = typename Double<T>::T;
             auto a = (DoubleT(i)*j) % P;
             auto b = GF_Mul<T,P> (i,j);
+            if (P==0xFFFFFFFF && b==P)  b=0;
             if (a != b)
             {
                 std::cout << std::hex << "\r" << i << "*" << j << "=" << a << " != " << b << "\n" ;
@@ -265,7 +266,7 @@ void Code (int argc, char **argv)
     char opt  =  (argc>=2?  argv[1][0] : ' ');
     if (opt=='i')  {Test_GF_Inv<T,P>();  return;}
     if (opt=='m')  {Test_GF_Mul<T,P>();  return;}
-    if (opt=='r')  {FindRoot<T,P>(P==0xFFFFFFFFFFFFFFFF?(uint64_t(1)<<32):P==0xFFFFFFFF?65536:P-1);  printf ("GF_Root %s\n", GF_Root<T,P>(2)==P-1? "OK": "failed");  return;}
+    if (opt=='r')  {FindRoot<T,P>(P==0xFFFFFFFFFFFFFFFF?(uint64_t(65536)*2*5*17449):P==0xFFFFFFFF?65536:P-1);  printf ("GF_Root %s\n", GF_Root<T,P>(2)==P-1? "OK": "failed");  return;}
     if (opt=='d')  {DividersDensity<T,P>();  return;}
     if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return;}
 
