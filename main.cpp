@@ -215,6 +215,8 @@ template <typename T, T P>
 void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE)
 {
     bool RunNTT3  =  (N%3 == 0);
+    bool RunNTT6  =  (N%6 == 0);
+    bool RunNTT9  =  (N%9 == 0);
 
     T *data0 = new T[N*SIZE];
     for (size_t i=0; i<N*SIZE; i++)
@@ -227,26 +229,31 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE)
     uint32_t hash0 = hash(data, N, SIZE);    // hash of original data
 
     char title[99];
-    sprintf (title, "NTT3<3*%.0lf,%.0lf>", N/3.0, SIZE*1.0*sizeof(T));
+    int divider = RunOld? N : RunNTT9? 9 : RunNTT6? 6 : RunNTT3? 3 : N;
+    sprintf (title, "NTT%d<%d*%.0lf,%.0lf>", divider, divider, N*1.0/divider, SIZE*1.0*sizeof(T));
     for (int i=64; i--; )
         if (T(1)<<i == N)
             sprintf (title, "%s<2^%d,%.0lf>", RunCanonical?"Slow_NTT":RunOld?"Rec_NTT":"MFA_NTT", i, SIZE*1.0*sizeof(T));
 
-         if (RunNTT3)      time_it (N*SIZE*sizeof(T), title, [&]{NTT3<T,P,false> (data, N/3, SIZE);});
+         if (RunOld)       time_it (N*SIZE*sizeof(T), title, [&]{Rec_NTT <T,P> (N, SIZE, data, false);});
+    else if (RunNTT9)      time_it (N*SIZE*sizeof(T), title, [&]{NTT9<T,P,false> (data, N/divider, SIZE);});
+    else if (RunNTT6)      time_it (N*SIZE*sizeof(T), title, [&]{NTT6<T,P,false> (data, N/divider, SIZE);});
+    else if (RunNTT3)      time_it (N*SIZE*sizeof(T), title, [&]{NTT3<T,P,false> (data, N/divider, SIZE);});
     else if (RunCanonical) time_it (N*SIZE*sizeof(T), title, [&]{Slow_NTT<T,P> (N, SIZE, data0,false);});
-    else if (RunOld)       time_it (N*SIZE*sizeof(T), title, [&]{Rec_NTT <T,P> (N, SIZE, data, false);});
     else                   time_it (N*SIZE*sizeof(T), title, [&]{MFA_NTT <T,P> (N, SIZE, data, false);});
 
     uint32_t hash1 = hash(data, N, SIZE);    // hash after NTT
 
     // Inverse NTT
-         if (RunNTT3)      NTT3<T,P,true>(data, N/3, SIZE);
+         if (RunOld)       Rec_NTT <T,P> (N, SIZE, data, true);
+    else if (RunNTT9)      NTT9<T,P,true>(data, N/9, SIZE);
+    else if (RunNTT6)      NTT6<T,P,true>(data, N/6, SIZE);
+    else if (RunNTT3)      NTT3<T,P,true>(data, N/3, SIZE);
     else if (RunCanonical) Slow_NTT<T,P> (N, SIZE, data0,true);
-    else if (RunOld)       Rec_NTT <T,P> (N, SIZE, data, true);
     else                   MFA_NTT <T,P> (N, SIZE, data, true);
 
     // Normalize the result by dividing by N
-    T inv_N = GF_Inv<T,P>(RunNTT3? 3 : N);
+    T inv_N = GF_Inv<T,P>(divider);
     for (size_t i=0; i<N*SIZE; i++)
         data0[i] = GF_Normalize<T,P> (GF_Mul<T,P> (data0[i], inv_N));
 
