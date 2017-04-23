@@ -1,10 +1,12 @@
 
 ### Program usage
 
-`prime N` - check whether N is prime, print divisors of N, and search, starting at N+1, for prime numbers as well as numbers only with small divisors
+`prime N` - check whether N is prime, print divisors of N, and search, starting at N+1, for prime numbers as well as numbers with only small divisors.
+
+This program is useful for researching ring properties, in particular maximal order. Some other ring/field properties are checked by the [NTT program](NTT.md).
 
 
-### Lucky number: choosing a proper base for computations
+### Lucky number: choosing the best base for computations
 
 Since GF(2^n) doesn't have useful unity roots, NTT-based Reed-Solomon codes implementation can't perform computations in this field.
 Instead, we need to use other Galois Field, or even Ring modulo some number. GF(p^n) has a maximal order of p^n-1.
@@ -70,3 +72,12 @@ If this bit is 1, it means that there is at least one 0xFFF value in output data
 In that case, first entry of the input data holds index of the first 0xFFF in output data (10 bits), plus the flag (1 - there are more 0xFFF in output data).
 If the flag is 1, then the next input item, again, contains index of the next 0xFFF in output data plus continuation flag.
 After the flag 0, remaining input items contains values of remaining output elements.
+
+---
+
+Once input (source) data are recoded in this way, we need to store the extra bit in the way which ensure that the bit can be restored
+in any situation when the data block can be restored. The best way to ensure this, that I found, is to save the extra bit as one more (1025'th)
+source word. So, all operations are performed on 4100-byte blocks, and ECC sectors stored are 4100-byte long. Sad, but I don't see better choice.
+Remaining bits of the extra word can be used to store block checksum, although i don't see much gain in that.
+
+Of course, when 64-bit base and/or GF(p^2) field are used, extra data will be increased to 8-16 bytes.
