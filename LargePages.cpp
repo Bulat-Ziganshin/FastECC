@@ -51,7 +51,7 @@ T* VAlloc (uint64_t size)
         s = (size+PageMask) & (~PageMask);
         r = VirtualAlloc(0, size, g_PageFlag0, PAGE_READWRITE);   // alloc using 4 KB pages, if preceding attempt failed
     }
-    printf("Allocated with %s\n", PageMask==0x1fffff? "2MB pages": PageMask==0xfff? "4KB pages": "unknown pagesize");
+    printf("Allocated %.0lf MiB with %s\n", s/1048576.0, PageMask==0x1fffff? "2MiB pages": PageMask==0xfff? "4KiB pages": "unknown pagesize");
     return (T*)r;
 }
 

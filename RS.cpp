@@ -69,8 +69,8 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
 int main (int argc, char **argv)
 {
     size_t N = 1<<19;   // NTT order
-    size_t SIZE = 1024; // Block size, in bytes
-                        // 512 MB total
+    size_t SIZE = 2052; // Block size, in bytes
+                        // 1 GB total
 
     if (argc>=2)  N = 1<<atoi(argv[1]);
     if (argc>=3)  SIZE = atoi(argv[2]);

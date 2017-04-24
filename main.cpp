@@ -265,9 +265,9 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE, const char
     // Now we should have exactly the input data
     uint32_t hash2 = hash(data, N, SIZE);    // hash after NTT+iNTT
     if (hash2 == hash0)
-        printf("Verified!  Original %.0lf,  after NTT: %.0lf  ", double(hash0), double(hash1));
+        printf("Verified!  Original %.0lf,  after NTT: %.0lf\n", double(hash0), double(hash1));
     else
-        printf("Checksum mismatch: original %.0lf,  after NTT: %.0lf,  after NTT+iNTT %.0lf", double(hash0), double(hash1), double(hash2));
+        printf("Checksum mismatch: original %.0lf,  after NTT: %.0lf,  after NTT+iNTT %.0lf\n", double(hash0), double(hash1), double(hash2));
 }
 
 
@@ -282,9 +282,9 @@ void Code (int argc, char **argv, const char* P_str)
     if (opt=='d')  {DividersDensity<T,P>();  return;}
     if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return;}
 
-    size_t N = 1<<20;   // NTT order
-    size_t SIZE = 512;  // Block size, in bytes
-                        // 512 MB total
+    size_t N = 1<<19;   // NTT order
+    size_t SIZE = 2052; // Block size, in bytes
+                        // 1 GB total
 
     if (argc>=3)  N = 1<<atoi(argv[2]);
     if (argc>=4)  SIZE = atoi(argv[3]);
