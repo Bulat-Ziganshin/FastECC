@@ -50,17 +50,17 @@ and post-process ECC blocks with GF_Normalize prior to writing.
 
 ### Benchmarks
 
-Executables are:
+Executables are compiled by:
 - `*64g`: 64-bit GCC 6.3
 - `*64m`: 64-bit MSVC 2017
 - `*32g`: 32-bit GCC 6.3
 - `*32m`: 32-bit MSVC 2017
 
-NOTE: currently, 32-bit executables are slower than 64-bit ones and MSVC-produced executables are slower than GCC-produced ones.
+NOTE: currently, 32-bit executables are slower than 64-bit ones and MSVC-produced executables are slower than GCC-compiled ones.
 In the final version, main loops will be implemented with SSE2/AVX2 and have the same performance, irrespective of compiler and mode,
-probably similar to the current best (64-bit GCC) executables. So, for NTT(2^20) expect 500+ MB/s for SSE2 version, and 1+ GB/s for AVX2 version.
+probably similar to the current best (64-bit GCC) executables. So, for NTT(2^20) we expect 500+ MB/s for SSE2 version, and 1+ GB/s for AVX2 version.
 
-Reed-Solomon encoding (2^19 + 2^19 src+ecc blocks 2052 bytes each):
+Reed-Solomon encoding (2^19 + 2^19 source+ECC blocks, 2052 bytes each):
 ```
 rs64g:  3498 ms = 587 MiB/s,  cpu 24461 ms = 699%,  os 16 ms
 rs64m:  3850 ms = 533 MiB/s,  cpu 28236 ms = 733%,  os 1154 ms
