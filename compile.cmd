@@ -10,11 +10,13 @@ set options_ms_x64=-MACHINE:x64 -SUBSYSTEM:CONSOLE,5.02
 ::call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
 ::call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
 call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 -no_logo
-cl -Fe%name%64m.exe -Fa %options_ms_cl% %options_ms_x64%
+cl -Fe%name%64m.exe -Fa%name%64.asm %options_ms_cl% %options_ms_x64%
 
 ::call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
 ::call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
 call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\VsDevCmd.bat" -arch=x86 -host_arch=x64 -no_logo
-cl -Fe%name%32m.exe %options_ms_cl% %options_ms_x86%
+cl -Fe%name%32m.exe -Fa%name%32.asm -arch:SSE2 %options_ms_cl% %options_ms_x86%
+
+::cl -Feprime.exe -O2 -EHsc prime.cpp
 
 del *.exe.bak *.obj *.res >nul 2>nul

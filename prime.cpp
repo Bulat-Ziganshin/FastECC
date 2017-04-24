@@ -43,7 +43,7 @@ int main (int argc, char **argv)
       NUM m = std::min(NUM(sqrt(N))+10, N);
       for (NUM i=3; i < m; i+=2)
         if (N%2==0 || N%i==0)
-          {if (N%2==0)  i=2;  printf("%llu / %u%s", N, i, (i>1000 || N==N0)? "\n" : "\r"); goto next;}
+          {if (N%2==0)  i=2;  printf("%llu / %llu%s", N, i, (i>1000 || N==N0)? "\n" : "\r"); goto next;}
       break;
       next: ;
     }
