@@ -20,7 +20,9 @@
 template <typename T, T P>
 void EncodeReedSolomon (size_t N, size_t SIZE)
 {
-    T *data0 = new T[N*SIZE];
+    T *data0 = VAlloc<T> (uint64_t(N)*SIZE);
+    if (data0==0)  {printf("Can't alloc %.0lf MiB of memory!\n", (N/1048576.0)*SIZE*sizeof(T)); return;}
+
     for (size_t i=0; i<N*SIZE; i++)
         data0[i] = i%P;
 

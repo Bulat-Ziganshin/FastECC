@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "wall_clock_timer.h"
+#include "LargePages.cpp"
 #include "GF(p).cpp"
 #include "NTT.cpp"
 
@@ -212,13 +213,15 @@ uint32_t hash (T** data, size_t N, size_t SIZE)
 
 // Benchmark and verify two NTT implementations: Rec_NTT() & MFA_NTT(), compare results to definitive Slow_NTT()
 template <typename T, T P>
-void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE)
+void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE, const char* P_str)
 {
     bool RunNTT3  =  (N%3 == 0);
     bool RunNTT6  =  (N%6 == 0);
     bool RunNTT9  =  (N%9 == 0);
 
-    T *data0 = new T[N*SIZE];
+    T *data0 = VAlloc<T> (uint64_t(N)*SIZE);
+    if (data0==0)  {printf("Can't alloc %.0lf MiB of memory!\n", (N/1048576.0)*SIZE*sizeof(T)); return;}
+
     for (size_t i=0; i<N*SIZE; i++)
         data0[i] = i%P;
 
@@ -230,10 +233,10 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE)
 
     char title[99];
     int divider = RunOld? N : RunNTT9? 9 : RunNTT6? 6 : RunNTT3? 3 : N;
-    sprintf (title, "NTT%d<%d*%.0lf,%.0lf>", divider, divider, N*1.0/divider, SIZE*1.0*sizeof(T));
+    sprintf (title, "NTT%d<%d*%.0lf,%.0lf,P=%s>", divider, divider, N*1.0/divider, SIZE*1.0*sizeof(T), P_str);
     for (int i=64; i--; )
         if (T(1)<<i == N)
-            sprintf (title, "%s<2^%d,%.0lf>", RunCanonical?"Slow_NTT":RunOld?"Rec_NTT":"MFA_NTT", i, SIZE*1.0*sizeof(T));
+            sprintf (title, "%s<2^%d,%.0lf,P=%s>", RunCanonical?"Slow_NTT":RunOld?"Rec_NTT":"MFA_NTT", i, SIZE*1.0*sizeof(T), P_str);
 
          if (RunOld)       time_it (N*SIZE*sizeof(T), title, [&]{Rec_NTT <T,P> (N, SIZE, data, false);});
     else if (RunNTT9)      time_it (N*SIZE*sizeof(T), title, [&]{NTT9<T,P,false> (data, N/divider, SIZE);});
@@ -268,7 +271,7 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE)
 
 // Parse cmdline and invoke appropriate benchmark/test routine
 template <typename T, T P>
-void Code (int argc, char **argv)
+void Code (int argc, char **argv, const char* P_str)
 {
     char opt  =  (argc>=2?  argv[1][0] : ' ');
     if (opt=='i')  {Test_GF_Inv<T,P>();  return;}
@@ -285,7 +288,7 @@ void Code (int argc, char **argv)
     if (argc>=4)  SIZE = atoi(argv[3]);
 
     assert(N<P);  // Too long NTT for the such small P
-    BenchNTT<T,P> (opt=='o', opt=='s', N, SIZE/sizeof(T));
+    BenchNTT<T,P> (opt=='o', opt=='s', N, SIZE/sizeof(T), P_str);
 }
 
 // Deal with argv[1] prefix:
@@ -293,19 +296,20 @@ void Code (int argc, char **argv)
 //   '-': switch to P=0xFFFFFFFF (not a primary number!)
 int main (int argc, char **argv)
 {
+    InitLargePages();
     if (argc>=2 && argv[1][0]=='=') {
         argv[1]++;
-        Code <uint32_t,0x10001> (argc, argv);
+        Code <uint32_t,0x10001> (argc, argv, "65537");
     } else if (argc>=2 && argv[1][0]=='-') {
         argv[1]++;
-        Code <uint32_t,0xFFFFFFFF> (argc, argv);
+        Code <uint32_t,0xFFFFFFFF> (argc, argv, "2^32-1");
 #ifdef MY_CPU_64BIT
     } else if (argc>=2 && argv[1][0]=='+') {
         argv[1]++;
-        Code <uint64_t,0xFFFFFFFFFFFFFFFF> (argc, argv);
-#endif        
+        Code <uint64_t,0xFFFFFFFFFFFFFFFF> (argc, argv, "2^64-1");
+#endif
     } else {
-        Code <uint32_t,0xFFF00001> (argc, argv);
+        Code <uint32_t,0xFFF00001> (argc, argv, "0xFFF00001");
     }
     return 0;
 }
