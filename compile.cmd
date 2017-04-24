@@ -1,7 +1,9 @@
 @echo off
 set name=ntt
-set options=main.cpp
-set options_ms=-MP -Gy -GR- -nologo -Fo%TEMP%\ -Fp%TEMP%\ %options% user32.lib shell32.lib ole32.lib advapi32.lib %* -link -LARGEADDRESSAWARE
+set main=main.cpp
+::set name=rs
+::set main=rs.cpp
+set options_ms=-MP -Gy -GR- -nologo -Fo%TEMP%\ -Fp%TEMP%\ %main% user32.lib shell32.lib ole32.lib advapi32.lib %* -link -LARGEADDRESSAWARE
 set options_ms=-GL %options_ms%
 set options_ms_cl=-O2 -EHsc %options_ms%
 set options_ms_x86=-MACHINE:x86 -SUBSYSTEM:CONSOLE,5.01
@@ -16,6 +18,9 @@ cl -Fe%name%64m.exe -Fa%name%64.asm %options_ms_cl% %options_ms_x64%
 ::call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
 call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\VsDevCmd.bat" -arch=x86 -host_arch=x64 -no_logo
 cl -Fe%name%32m.exe -Fa%name%32.asm -arch:SSE2 %options_ms_cl% %options_ms_x86%
+
+::g++ -std=c++14 -m64 -O3 %main% -o%name%64g.exe -static -fopenmp
+::g++ -std=c++14 -m32 -O3 %main% -o%name%32g.exe -static -fopenmp -msse2 -Xlinker --large-address-aware 
 
 ::cl -Feprime.exe -O2 -EHsc prime.cpp
 
