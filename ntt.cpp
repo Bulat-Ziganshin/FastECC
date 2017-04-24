@@ -233,9 +233,10 @@ void RecursiveNTT_Steps (T** data, size_t FirstN, size_t N, size_t SIZE, T* root
         T* __restrict__ block1 = data[i];
         T* __restrict__ block2 = data[i+N];
         for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
-            T temp    = GF_Mul<T,P> (block2[k], root_i);
-            block2[k] = GF_Sub<T,P> (block1[k], temp);
-            block1[k] = GF_Add<T,P> (block1[k], temp);
+            T u       = block1[k];
+            T v       = GF_Mul<T,P> (block2[k], root_i);
+            block1[k] = GF_Add<T,P> (u,v);
+            block2[k] = GF_Sub<T,P> (u,v);
         }
         root_i = GF_Mul<T,P> (root_i, root);            // next root of power 2N of 1
     }
@@ -255,9 +256,10 @@ void IterativeNTT_Steps (T** data, size_t FirstN, size_t LastN, size_t SIZE, T* 
             T* __restrict__ block1 = data[x];
             T* __restrict__ block2 = data[x+N];
             for (size_t k=0; k<SIZE; k++) {                     // cycle over SIZE elements of the single block
-                T temp    = block2[k];                          // optimized for root_i==1
-                block2[k] = GF_Sub<T,P> (block1[k], temp);
-                block1[k] = GF_Add<T,P> (block1[k], temp);
+                T u       = block1[k];
+                T v       = block2[k];                          // optimized for root_i==1
+                block1[k] = GF_Add<T,P> (u,v);
+                block2[k] = GF_Sub<T,P> (u,v);
             }
 
             // remaining cycles with root_i!=1
@@ -266,9 +268,10 @@ void IterativeNTT_Steps (T** data, size_t FirstN, size_t LastN, size_t SIZE, T* 
                 T* __restrict__ block1 = data[x+i];
                 T* __restrict__ block2 = data[x+i+N];
                 for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
-                    T temp    = GF_Mul<T,P> (block2[k], root_i);
-                    block2[k] = GF_Sub<T,P> (block1[k], temp);
-                    block1[k] = GF_Add<T,P> (block1[k], temp);
+                    T u       = block1[k];
+                    T v       = GF_Mul<T,P> (block2[k], root_i);
+                    block1[k] = GF_Add<T,P> (u,v);
+                    block2[k] = GF_Sub<T,P> (u,v);
                 }
                 root_i = GF_Mul<T,P> (root_i, root);            // next root of power 2N of 1
             }
