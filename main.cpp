@@ -247,6 +247,10 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE, const char
     else if (RunCanonical) time_it (processed_size, title, [&]{Slow_NTT<T,P> (data0,N, SIZE, false);});
     else                   time_it (processed_size, title, [&]{MFA_NTT <T,P> (data, N, SIZE, false);});
 
+    // Pack results into 0..P-1 range
+    for (size_t i=0; i<N*SIZE; i++)
+        data0[i] = GF_Normalize<T,P> (data0[i]);
+
     uint32_t hash1 = hash(data, N, SIZE);    // hash after NTT
 
     // Inverse NTT
@@ -257,7 +261,7 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE, const char
     else if (RunCanonical) Slow_NTT<T,P> (data0,N, SIZE, true);
     else                   MFA_NTT <T,P> (data, N, SIZE, true);
 
-    // Normalize the result by dividing by N
+    // Normalize the result by dividing by N and pack results into 0..P-1 range
     T inv_N = GF_Inv<T,P>(divider);
     for (size_t i=0; i<N*SIZE; i++)
         data0[i] = GF_Normalize<T,P> (GF_Mul<T,P> (data0[i], inv_N));
