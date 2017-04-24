@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "wall_clock_timer.h"
+#include "LargePages.cpp"
 #include "GF(p).cpp"
 #include "NTT.cpp"
 
@@ -33,7 +34,7 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
     char title[99];
     sprintf (title, "Reed-Solomon encoding (2^%.0lf + 2^%.0lf src+ecc blocks %.0lf bytes each)", logb(N), logb(N), SIZE*1.0*sizeof(T));
 
-    time_it (2*N*SIZE*sizeof(T), title, [&]
+    time_it (2.0*N*SIZE*sizeof(T), title, [&]
     {
         // 1. iNTT: polynom interpolation. We find coefficients of order-N polynom describing the source data
         MFA_NTT <T,P> (N, SIZE, data, true);

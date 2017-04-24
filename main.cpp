@@ -238,12 +238,14 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE, const char
         if (T(1)<<i == N)
             sprintf (title, "%s<2^%d,%.0lf,P=%s>", RunCanonical?"Slow_NTT":RunOld?"Rec_NTT":"MFA_NTT", i, SIZE*1.0*sizeof(T), P_str);
 
-         if (RunOld)       time_it (N*SIZE*sizeof(T), title, [&]{Rec_NTT <T,P> (N, SIZE, data, false);});
-    else if (RunNTT9)      time_it (N*SIZE*sizeof(T), title, [&]{NTT9<T,P,false> (data, N/divider, SIZE);});
-    else if (RunNTT6)      time_it (N*SIZE*sizeof(T), title, [&]{NTT6<T,P,false> (data, N/divider, SIZE);});
-    else if (RunNTT3)      time_it (N*SIZE*sizeof(T), title, [&]{NTT3<T,P,false> (data, N/divider, SIZE);});
-    else if (RunCanonical) time_it (N*SIZE*sizeof(T), title, [&]{Slow_NTT<T,P> (N, SIZE, data0,false);});
-    else                   time_it (N*SIZE*sizeof(T), title, [&]{MFA_NTT <T,P> (N, SIZE, data, false);});
+    double processed_size = (P==0x10001? 0.5:1.0) * N*SIZE*sizeof(T);
+
+         if (RunOld)       time_it (processed_size, title, [&]{Rec_NTT <T,P> (N, SIZE, data, false);});
+    else if (RunNTT9)      time_it (processed_size, title, [&]{NTT9<T,P,false> (data, N/divider, SIZE);});
+    else if (RunNTT6)      time_it (processed_size, title, [&]{NTT6<T,P,false> (data, N/divider, SIZE);});
+    else if (RunNTT3)      time_it (processed_size, title, [&]{NTT3<T,P,false> (data, N/divider, SIZE);});
+    else if (RunCanonical) time_it (processed_size, title, [&]{Slow_NTT<T,P> (N, SIZE, data0,false);});
+    else                   time_it (processed_size, title, [&]{MFA_NTT <T,P> (N, SIZE, data, false);});
 
     uint32_t hash1 = hash(data, N, SIZE);    // hash after NTT
 
@@ -323,6 +325,7 @@ MFA_NTT: recursively split data into <=512 KB blocks
 IterativeNTT_Steps: optional extra twiddle factors in the last cycle so we can avoid them in MFA_NTT
 template<typename GF> {operators +-*^/; static constexpr const GF root3, root3_2...;}
 try to use "double" for GF(p)&Mod(p) operations, it may be faster
+std::async: http://www.numberworld.org/y-cruncher/guides/multithreading.html
 
 Order Multiplications
 2     0

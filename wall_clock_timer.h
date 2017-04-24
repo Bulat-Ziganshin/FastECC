@@ -71,7 +71,7 @@ void GetProcessKernelUserTimes (double *KernelTime, double *UserTime)
 }
 #endif // TIMER_H
 
-void time_it (int64_t size, const char* name, std::function<void()> Code)
+void time_it (double size, const char* name, std::function<void()> Code)
 {
     static int _ = (StartTimer(),0);
     double start = GetTimer(), KernelTime[2], UserTime[2];
