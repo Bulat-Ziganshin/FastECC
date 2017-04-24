@@ -428,7 +428,7 @@ void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
         // 3. Apply a (length C) FFT on each row
         #pragma omp for
         for (ptrdiff_t i=0; i<N; i+=C)
-            IterativeNTT<T,P> (data+i, C, SIZE, root_ptr);
+            MFA_NTT<T,P> (data+i, C, SIZE, InvNTT);
 
         // 4. Transpose the matrix by transposing block pointers in the data[]
         TransposeMatrix (data, R, C);
