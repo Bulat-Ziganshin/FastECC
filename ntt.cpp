@@ -375,8 +375,15 @@ void Rec_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
 template <typename T, T P>
 void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
 {
+    const size_t L2Cache = 64*1024;  // part of L2 cache owned by each CPU core/thread
+
     // Split N-size problem into R rows * C columns
     size_t R = 1;   while (R*R < N)  R*=2;
+
+    // If subproblems doesn't fit into L2 cache, represent computation as R*C*L cube
+    if (R*SIZE*sizeof(T) > L2Cache) {
+        R = 1;   while (R*R*R < N)  R*=2;
+    }
     size_t C = N/R;
 
     // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
@@ -396,7 +403,7 @@ void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
     }
 
     // MFA is impossible or inefficient
-    if (N < 4  ||  N*SIZE < 256*1024)
+    if (N < 4  ||  N*SIZE*sizeof(T) < L2Cache)
     {
         IterativeNTT<T,P> (data, N, SIZE, root_ptr);
         return;
@@ -427,8 +434,12 @@ void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
 
         // 3. Apply a (length C) FFT on each row
         #pragma omp for
-        for (ptrdiff_t i=0; i<N; i+=C)
-            MFA_NTT<T,P> (data+i, C, SIZE, InvNTT);
+        for (ptrdiff_t i=0; i<N; i+=C) {
+            if (R >= C)  // R rows * C columns
+                IterativeNTT<T,P> (data+i, C, SIZE, root_ptr);
+            else         // R*C*L cube
+                MFA_NTT<T,P> (data+i, C, SIZE, InvNTT);
+        }
 
         // 4. Transpose the matrix by transposing block pointers in the data[]
         TransposeMatrix (data, R, C);
