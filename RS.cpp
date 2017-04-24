@@ -75,5 +75,6 @@ int main (int argc, char **argv)
     if (argc>=2)  N = 1<<atoi(argv[1]);
     if (argc>=3)  SIZE = atoi(argv[2]);
 
+    InitLargePages();
     EncodeReedSolomon<uint32_t,0xFFF00001> (N,SIZE/sizeof(uint32_t));
 }
