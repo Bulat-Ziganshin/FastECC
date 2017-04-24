@@ -70,12 +70,12 @@ rs32m:  6887 ms = 298 MiB/s,  cpu 52089 ms = 756%,  os 593 ms
 
 ---
 
-Old recursive NTT, new MFA NTT and pure Butterfly operations in various GF(p) and rings:
+New MFA NTT , old recursive NTT and pure Butterfly operations in various GF(p) and rings:
 ```
-ntt64g:  MFA_NTT<2^19,2052,P=0xFFF00001>: 1594 ms = 644 MiB/s,  cpu 11404 ms = 715%,  os 0 ms
-ntt64m:  MFA_NTT<2^19,2052,P=0xFFF00001>: 1810 ms = 567 MiB/s,  cpu 13135 ms = 726%,  os 577 ms
-ntt32g:  MFA_NTT<2^19,2052,P=0xFFF00001>: 2422 ms = 424 MiB/s,  cpu 16973 ms = 701%,  os 16 ms
-ntt32m:  MFA_NTT<2^19,2052,P=0xFFF00001>: 2856 ms = 359 MiB/s,  cpu 21341 ms = 747%,  os 374 ms
+ntt64g n:  MFA_NTT<2^19,2052,P=0xFFF00001>: 1594 ms = 644 MiB/s,  cpu 11404 ms = 715%,  os 0 ms
+ntt64m n:  MFA_NTT<2^19,2052,P=0xFFF00001>: 1810 ms = 567 MiB/s,  cpu 13135 ms = 726%,  os 577 ms
+ntt32g n:  MFA_NTT<2^19,2052,P=0xFFF00001>: 2422 ms = 424 MiB/s,  cpu 16973 ms = 701%,  os 16 ms
+ntt32m n:  MFA_NTT<2^19,2052,P=0xFFF00001>: 2856 ms = 359 MiB/s,  cpu 21341 ms = 747%,  os 374 ms
 
 ntt64g o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 2819 ms = 364 MiB/s,  cpu 10296 ms = 365%,  os 0 ms
 ntt64m o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 3944 ms = 260 MiB/s,  cpu 18798 ms = 477%,  os 562 ms
@@ -83,72 +83,64 @@ ntt32g o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 3440 ms = 298 MiB/s,  cpu 15584 ms =
 ntt32m o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 5146 ms = 199 MiB/s,  cpu 22059 ms = 429%,  os 296 ms
 
 
-ntt64g o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 1585 ms = 323 MiB/s,  cpu 3214 ms = 203%,  os 0 ms
 ntt64g n 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 737 ms = 694 MiB/s,  cpu 4820 ms = 654%,  os 16 ms
+ntt64g o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 1585 ms = 323 MiB/s,  cpu 3214 ms = 203%,  os 0 ms
 ntt64g b:  Butterfly: 921 ms = 11120 MiB/s,  cpu 6521 ms = 708%,  os 0 ms
 
-ntt64m o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 1596 ms = 321 MiB/s,  cpu 7051 ms = 442%,  os 546 ms
 ntt64m n 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 820 ms = 624 MiB/s,  cpu 5491 ms = 669%,  os 406 ms
+ntt64m o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 1596 ms = 321 MiB/s,  cpu 7051 ms = 442%,  os 546 ms
 ntt64m b:  Butterfly: 1162 ms = 8809 MiB/s,  cpu 8268 ms = 711%,  os 250 ms
 
-ntt32g o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 2135 ms = 240 MiB/s,  cpu 4352 ms = 204%,  os 0 ms
 ntt32g n 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 1126 ms = 455 MiB/s,  cpu 7628 ms = 678%,  os 31 ms
+ntt32g o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 2135 ms = 240 MiB/s,  cpu 4352 ms = 204%,  os 0 ms
 ntt32g b:  Butterfly: 1578 ms = 6488 MiB/s,  cpu 11435 ms = 725%,  os 0 ms
 
-ntt32m o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 2186 ms = 234 MiB/s,  cpu 8798 ms = 402%,  os 250 ms
 ntt32m n 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 1281 ms = 400 MiB/s,  cpu 9329 ms = 728%,  os 328 ms
+ntt32m o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 2186 ms = 234 MiB/s,  cpu 8798 ms = 402%,  os 250 ms
 ntt32m b:  Butterfly: 1592 ms = 6432 MiB/s,  cpu 11700 ms = 735%,  os 78 ms
 
 
-ntt64g =o 16 8192:  Rec_NTT<2^16,8192,P=65537>: 902 ms = 284 MiB/s,  cpu 1919 ms = 213%,  os 0 ms
 ntt64g =n 16 8192:  MFA_NTT<2^16,8192,P=65537>: 512 ms = 500 MiB/s,  cpu 3323 ms = 649%,  os 0 ms
+ntt64g =o 16 8192:  Rec_NTT<2^16,8192,P=65537>: 902 ms = 284 MiB/s,  cpu 1919 ms = 213%,  os 0 ms
 ntt64g =b:  Butterfly: 364 ms = 28124 MiB/s,  cpu 1919 ms = 527%,  os 0 ms
 
-ntt64m =o 16 8192:  Rec_NTT<2^16,8192,P=65537>: 1494 ms = 171 MiB/s,  cpu 6677 ms = 447%,  os 624 ms
 ntt64m =n 16 8192:  MFA_NTT<2^16,8192,P=65537>: 791 ms = 324 MiB/s,  cpu 5538 ms = 700%,  os 312 ms
+ntt64m =o 16 8192:  Rec_NTT<2^16,8192,P=65537>: 1494 ms = 171 MiB/s,  cpu 6677 ms = 447%,  os 624 ms
 ntt64m =b:  Butterfly: 1016 ms = 10081 MiB/s,  cpu 7301 ms = 719%,  os 203 ms
 
-ntt32g =o 16 8192:  Rec_NTT<2^16,8192,P=65537>: 1602 ms = 160 MiB/s,  cpu 3276 ms = 205%,  os 0 ms
 ntt32g =n 16 8192:  MFA_NTT<2^16,8192,P=65537>: 811 ms = 316 MiB/s,  cpu 5678 ms = 700%,  os 0 ms
+ntt32g =o 16 8192:  Rec_NTT<2^16,8192,P=65537>: 1602 ms = 160 MiB/s,  cpu 3276 ms = 205%,  os 0 ms
 ntt32g =b:  Butterfly: 895 ms = 11440 MiB/s,  cpu 5897 ms = 659%,  os 0 ms
 
-ntt32m =o 16 8192:  Rec_NTT<2^16,8192,P=65537>: 1518 ms = 169 MiB/s,  cpu 7332 ms = 483%,  os 250 ms
 ntt32m =n 16 8192:  MFA_NTT<2^16,8192,P=65537>: 770 ms = 332 MiB/s,  cpu 5476 ms = 711%,  os 250 ms
+ntt32m =o 16 8192:  Rec_NTT<2^16,8192,P=65537>: 1518 ms = 169 MiB/s,  cpu 7332 ms = 483%,  os 250 ms
 ntt32m =b:  Butterfly: 813 ms = 12599 MiB/s,  cpu 5834 ms = 718%,  os 140 ms
 
 
-ntt64g -o 16 8192:  Rec_NTT<2^16,8192,P=2^32-1>: 908 ms = 564 MiB/s,  cpu 1888 ms = 208%,  os 0 ms
 ntt64g -n 16 8192:  MFA_NTT<2^16,8192,P=2^32-1>: 529 ms = 967 MiB/s,  cpu 3104 ms = 586%,  os 0 ms
+ntt64g -o 16 8192:  Rec_NTT<2^16,8192,P=2^32-1>: 908 ms = 564 MiB/s,  cpu 1888 ms = 208%,  os 0 ms
 ntt64g -b:  Butterfly: 459 ms = 22308 MiB/s,  cpu 2449 ms = 534%,  os 0 ms
 
-ntt64m -o 16 8192:  Rec_NTT<2^16,8192,P=2^32-1>: 1361 ms = 376 MiB/s,  cpu 6646 ms = 488%,  os 515 ms
 ntt64m -n 16 8192:  MFA_NTT<2^16,8192,P=2^32-1>: 725 ms = 706 MiB/s,  cpu 5023 ms = 693%,  os 359 ms
+ntt64m -o 16 8192:  Rec_NTT<2^16,8192,P=2^32-1>: 1361 ms = 376 MiB/s,  cpu 6646 ms = 488%,  os 515 ms
 ntt64m -b:  Butterfly: 797 ms = 12852 MiB/s,  cpu 5444 ms = 683%,  os 281 ms
 
-ntt32g -o 16 8192:  Rec_NTT<2^16,8192,P=2^32-1>: 1612 ms = 318 MiB/s,  cpu 3370 ms = 209%,  os 0 ms
 ntt32g -n 16 8192:  MFA_NTT<2^16,8192,P=2^32-1>: 861 ms = 595 MiB/s,  cpu 5460 ms = 634%,  os 0 ms
+ntt32g -o 16 8192:  Rec_NTT<2^16,8192,P=2^32-1>: 1612 ms = 318 MiB/s,  cpu 3370 ms = 209%,  os 0 ms
 ntt32g -b:  Butterfly: 843 ms = 12148 MiB/s,  cpu 5585 ms = 663%,  os 0 ms
 
-ntt32m -o 16 8192:  Rec_NTT<2^16,8192,P=2^32-1>: 1554 ms = 330 MiB/s,  cpu 7160 ms = 461%,  os 312 ms
 ntt32m -n 16 8192:  MFA_NTT<2^16,8192,P=2^32-1>: 788 ms = 650 MiB/s,  cpu 5678 ms = 721%,  os 94 ms
+ntt32m -o 16 8192:  Rec_NTT<2^16,8192,P=2^32-1>: 1554 ms = 330 MiB/s,  cpu 7160 ms = 461%,  os 312 ms
 ntt32m -b:  Butterfly: 706 ms = 14502 MiB/s,  cpu 4976 ms = 705%,  os 47 ms
 
 
-ntt64g +o 16 8192:  Rec_NTT<2^16,8192,P=2^64-1>: 881 ms = 581 MiB/s,  cpu 1888 ms = 214%,  os 0 ms
 ntt64g +n 16 8192:  MFA_NTT<2^16,8192,P=2^64-1>: 517 ms = 991 MiB/s,  cpu 3619 ms = 701%,  os 16 ms
+ntt64g +o 16 8192:  Rec_NTT<2^16,8192,P=2^64-1>: 881 ms = 581 MiB/s,  cpu 1888 ms = 214%,  os 0 ms
 ntt64g +b:  Butterfly: 306 ms = 33443 MiB/s,  cpu 1778 ms = 581%,  os 0 ms
 
-ntt64m +o 16 8192:  Rec_NTT<2^16,8192,P=2^64-1>: 1082 ms = 473 MiB/s,  cpu 6271 ms = 580%,  os 484 ms
 ntt64m +n 16 8192:  MFA_NTT<2^16,8192,P=2^64-1>: 498 ms = 1029 MiB/s,  cpu 3182 ms = 640%,  os 250 ms
+ntt64m +o 16 8192:  Rec_NTT<2^16,8192,P=2^64-1>: 1082 ms = 473 MiB/s,  cpu 6271 ms = 580%,  os 484 ms
 ntt64m +b:  Butterfly: 341 ms = 30065 MiB/s,  cpu 1919 ms = 563%,  os 172 ms
-
-ntt32g +o 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 1103 ms = 464 MiB/s,  cpu 7566 ms = 686%,  os 0 ms
-ntt32g +n 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 1113 ms = 460 MiB/s,  cpu 7644 ms = 687%,  os 0 ms
-ntt32g +b:  MFA_NTT<2^20,512,P=0xFFF00001>: 1699 ms = 301 MiB/s,  cpu 11653 ms = 686%,  os 0 ms
-
-ntt32m +o 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 1288 ms = 398 MiB/s,  cpu 9220 ms = 716%,  os 296 ms
-ntt32m +n 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 1227 ms = 417 MiB/s,  cpu 9017 ms = 735%,  os 156 ms
-ntt32m +b:  MFA_NTT<2^20,512,P=0xFFF00001>: 2169 ms = 236 MiB/s,  cpu 14040 ms = 647%,  os 499 ms
 ```
 
 ---
@@ -159,12 +151,10 @@ Comparison of slow O(N^2) NTT with fast algorithms:
 C:\!FreeArc\public\FastECC>timer ntt64g.exe s 20 32
 Slow_NTT<2^20,32,P=0xFFF00001>: 9123729 ms = 0 MiB/s,  cpu 60703889 ms = 665%,  os 51808 ms
 Verified! Original 2679569933,  after NTT: 1187104119
-
 Kernel Time  =   101.041 = 00:01:41.041 =   0%
 User Time    = 121412.286 = 33:43:32.286 = 665%
 Process Time = 121513.328 = 33:45:13.328 = 665%
 Global Time  = 18257.312 = 05:04:17.312 = 100%
-
 
 C:\!FreeArc\public\FastECC>timer ntt64g.exe o 20 32
 Rec_NTT<2^20,32,P=0xFFF00001>: 322 ms = 99 MiB/s,  cpu 1264 ms = 393%,  os 0 ms
