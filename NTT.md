@@ -5,7 +5,7 @@
 
 First argument is one of chars "irmdbson", optionally prefixed with "=", "-" or "+" (character "n" may be omitted). Remaining arguments are used only for options "son".
 
-By default, all computations are performed in GF(0xFFF00001). Prefix "=" switches to GF(0x10001), 
+By default, all computations are performed in GF(0xFFF00001). Prefix "=" switches to GF(0x10001),
 while prefixes "-" and "+" switches to computations modulo 2^32-1 and 2^64-1, correspondingly.
 Note that 2^32-1 and 2^64-1 aren't prime numbers, nevertheless they support NTT up to order 65536, and more than 2x faster than computations in GF(0xFFF00001).
 Computations modulo 2^32-1 and 2^64-1 require normalisation (GF_Normalize call) after all computations.
@@ -56,23 +56,31 @@ Executables are:
 - `*32g`: 32-bit GCC 6.3
 - `*32m`: 32-bit MSVC 2017
 
-Reed-Solomon encoding (2^19 + 2^19 source+ECC blocks, 4092 bytes each):
+NOTE: currently, 32-bit executables are slower than 64-bit ones and MSVC-produced executables are slower than GCC-produced ones.
+In the final version, main loops will be implemented with SSE2/AVX2 and have the same performance, irrespective of compiler and mode,
+probably similar to the current best (64-bit GCC) executables. So, for NTT(2^20) expect 500+ MB/s for SSE2 version, and 1+ GB/s for AVX2 version.
+
+Reed-Solomon encoding (2^19 + 2^19 src+ecc blocks 2052 bytes each):
 ```
-rs64g 19 4092:   6974 ms = 587 MiB/s,  cpu 49967 ms = 716%,  os 0 ms
-rs64m 19 4092:   7471 ms = 548 MiB/s,  cpu 55162 ms = 738%,  os 1872 ms
-rs32g 19 4092:  10287 ms = 398 MiB/s,  cpu 73601 ms = 715%,  os 47 ms
-rs32m 19 4092:  13577 ms = 301 MiB/s,  cpu 101354 ms = 747%,  os 920 ms
+rs64g:  3498 ms = 587 MiB/s,  cpu 24461 ms = 699%,  os 16 ms
+rs64m:  3850 ms = 533 MiB/s,  cpu 28236 ms = 733%,  os 1154 ms
+rs32g:  5278 ms = 389 MiB/s,  cpu 36738 ms = 696%,  os 16 ms
+rs32m:  6887 ms = 298 MiB/s,  cpu 52089 ms = 756%,  os 593 ms
 ```
 
 ---
 
-Old (recursive) NTT, new (MFA) NTT and pure Butterfly operations in various GF(p) and rings:
-
+Old recursive NTT, new MFA NTT and pure Butterfly operations in various GF(p) and rings:
 ```
-ntt64g o 20 4100:  Rec_NTT<2^20,4100,P=0xFFF00001>: 11561 ms = 355 MiB/s,  cpu 54023 ms = 467%,  os 0 ms
-ntt64g n 20 4100:  MFA_NTT<2^20,4100,P=0xFFF00001>: 6869 ms = 597 MiB/s,  cpu 50170 ms = 730%,  os 94 ms
-ntt64m o 20 4100:  Rec_NTT<2^20,4100,P=0xFFF00001>: 15776 ms = 260 MiB/s,  cpu 67954 ms = 431%,  os 686 ms
-ntt64m n 20 4100:  MFA_NTT<2^20,4100,P=0xFFF00001>: 7450 ms = 550 MiB/s,  cpu 55302 ms = 742%,  os 1108 ms
+ntt64g:  MFA_NTT<2^19,2052,P=0xFFF00001>: 1594 ms = 644 MiB/s,  cpu 11404 ms = 715%,  os 0 ms
+ntt64m:  MFA_NTT<2^19,2052,P=0xFFF00001>: 1810 ms = 567 MiB/s,  cpu 13135 ms = 726%,  os 577 ms
+ntt32g:  MFA_NTT<2^19,2052,P=0xFFF00001>: 2422 ms = 424 MiB/s,  cpu 16973 ms = 701%,  os 16 ms
+ntt32m:  MFA_NTT<2^19,2052,P=0xFFF00001>: 2856 ms = 359 MiB/s,  cpu 21341 ms = 747%,  os 374 ms
+
+ntt64g o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 2819 ms = 364 MiB/s,  cpu 10296 ms = 365%,  os 0 ms
+ntt64m o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 3944 ms = 260 MiB/s,  cpu 18798 ms = 477%,  os 562 ms
+ntt32g o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 3440 ms = 298 MiB/s,  cpu 15584 ms = 453%,  os 0 ms
+ntt32m o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 5146 ms = 199 MiB/s,  cpu 22059 ms = 429%,  os 296 ms
 
 
 ntt64g o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 1585 ms = 323 MiB/s,  cpu 3214 ms = 203%,  os 0 ms
