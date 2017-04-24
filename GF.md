@@ -17,7 +17,7 @@ Such bases allow efficient data storage and fast radix conversion from/to 2^a ba
 while computations become more efficient when b=1 and especially when b=-1.
 
 Good candidates for the base are:
-- GF(0xFFF00001) - my current favourite. `0xFFF00000 = 2^20*3*3*5*7*13` has 504 divisors overall, and for random N we can find a divisor that is only a few percents larger.
+- GF(0xFFF00001) - my current favourite. `0xFFF00000 = 2^20*3*3*5*7*13` has 504 divisors overall, and for random 32-bit N we can find a divisor that is only a few percents larger.
 This means that when we need to process N source blocks, we can perform NTT using only a few percents more memory than the source data occupy. Source blocks up to 4 KB
 can be converted into 1024 numbers in the 0..0xFFF00000 range plus a single bit.
 - GF(0x10001) - computations are 30% faster, but NTT order may be only 2,4..65536.
@@ -28,7 +28,7 @@ Compact memory storage require to recode data into base-0x10000 plus one overflo
 - GF(p^2) for p=2^31-1 - 2x faster, max order `p^2-1 = 2^32*3*3*7*11*31*151*331` so the divisors are almost as dense as for GF(0xFFF00001).
 It may be the best base, but its efficient implementation will require extra work.
 - GF(2^61-1) - fastest for pure (non-SIMD) x64 code, but `p-1 = 2*3*3*5*5*7*11*13*31*41*61*151*331*1321` has not too much divisors
-- GF(p^2) for p=2^61-1 may be also interesting since it's almost as fast as GF(p) and `p^2-1 = 2^62*3*3*5*5*7*11*13*31*41*61*151*331*1321`,
+- GF(p^2) for p=2^61-1 may be also interesting since it's almost as fast as GF(2^61-1) and `p^2-1 = 2^62*3*3*5*5*7*11*13*31*41*61*151*331*1321`,
 providing ideal coverage of integer space by divisors. I think that it may be 3-4x faster than GF(0xFFF00001).
 It may be the best base for x64, but its efficient implementation will require extra work.
 - Mod(2^64-1) - among fastest variants for x64, but NTT order should be a divisor of `2^16*3*5*17449`, so it doesn't provide much choice.
@@ -55,7 +55,7 @@ EAX *= EBX
 ```
 
 64-bit code for operations Mod(2^64-1) is essentially the same.
-The entire Butterfly computation consists of these three operations, so it can be performed in 3 CPU cycles (limited by ADC throughput).
+The entire Butterfly computation consists of these three operations, so (on Skylake) it can be performed in 3 CPU cycles (limited by ADC throughput).
 One Butterfly operation processes 8 bytes for Mod(2^32-1) or 16 bytes for Mod(2^64-1), so it will process 10/20 GB/s per core.
 NTT(2^N) require N passes over data, so its speed will be 10/N or 20/N GB/s per core.
 F.e. NTT(2^20) using Mod(2^64-1) operations will run at 1 GB/s per core, 4 GB/s overall!!!
