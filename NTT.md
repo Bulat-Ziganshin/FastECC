@@ -1,7 +1,7 @@
 
 ### Program usage
 
-`NTT [=|-][i|r|m|d|b|s|o|n] [N=20 [SIZE=512]]` - test/benchmark GF(p) and NTT implementation
+`NTT [=|-][i|r|m|d|b|s|o|n] [N=20 [SIZE=512]]` - test/benchmark GF(p) and NTT implementations
 
 First argument is one of chars "irmdbson", optionally prefixed with "=", "-" or "+" (character "n" may be omitted). Remaining arguments are used only for options "son".
 
@@ -29,7 +29,7 @@ For every NTT, inverse operation is also performed and program verifies that NTT
 
 Now the best possible performance of Reed-Solomon encoding is 600 MB/s on i7-4770 using ALL cores.
 It can be reached with 2^20 source blocks and 2^20 ECC blocks, each 4 KB large,
-i.e. encoding 2 GB of source data into 2 GB of ECC data, that is processed in 7 seconds.
+i.e. encoding 2 GB of source data into 2 GB of ECC data, that is finished in 7 seconds.
 
 With current implementation, maximum performance is reached only when all of the following conditions are met:
 - Block size >= 4 KB. Smaller block sizes means more cache misses, it can be avoided only by careful prefetching.
@@ -56,12 +56,12 @@ Executables are:
 - `*32g`: 32-bit GCC 6.3
 - `*32m`: 32-bit MSVC 2017
 
-Reed-Solomon encoding (2^19 + 2^19 src+ecc blocks 4000 bytes each):
+Reed-Solomon encoding (2^19 + 2^19 source+ECC blocks, 4092 bytes each):
 ```
-rs64g 19 4000:   7544 ms = 530 MiB/s,  cpu 54476 ms = 722%,  os 62 ms
-rs64m 19 4000:   7969 ms = 502 MiB/s,  cpu 59998 ms = 753%,  os 1685 ms
-rs32g 19 4000:  10569 ms = 378 MiB/s,  cpu 75520 ms = 715%,  os 47 ms
-rs32m 19 4000:  13511 ms = 296 MiB/s,  cpu 100636 ms = 745%,  os 1061 ms
+rs64g 19 4092:   6974 ms = 587 MiB/s,  cpu 49967 ms = 716%,  os 0 ms
+rs64m 19 4092:   7471 ms = 548 MiB/s,  cpu 55162 ms = 738%,  os 1872 ms
+rs32g 19 4092:  10287 ms = 398 MiB/s,  cpu 73601 ms = 715%,  os 47 ms
+rs32m 19 4092:  13577 ms = 301 MiB/s,  cpu 101354 ms = 747%,  os 920 ms
 ```
 
 ---
@@ -69,6 +69,12 @@ rs32m 19 4000:  13511 ms = 296 MiB/s,  cpu 100636 ms = 745%,  os 1061 ms
 Old (recursive) NTT, new (MFA) NTT and pure Butterfly operations in various GF(p) and rings:
 
 ```
+ntt64g o 20 4100:  Rec_NTT<2^20,4100,P=0xFFF00001>: 11561 ms = 355 MiB/s,  cpu 54023 ms = 467%,  os 0 ms
+ntt64g n 20 4100:  MFA_NTT<2^20,4100,P=0xFFF00001>: 6869 ms = 597 MiB/s,  cpu 50170 ms = 730%,  os 94 ms
+ntt64m o 20 4100:  Rec_NTT<2^20,4100,P=0xFFF00001>: 15776 ms = 260 MiB/s,  cpu 67954 ms = 431%,  os 686 ms
+ntt64m n 20 4100:  MFA_NTT<2^20,4100,P=0xFFF00001>: 7450 ms = 550 MiB/s,  cpu 55302 ms = 742%,  os 1108 ms
+
+
 ntt64g o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 1585 ms = 323 MiB/s,  cpu 3214 ms = 203%,  os 0 ms
 ntt64g n 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 737 ms = 694 MiB/s,  cpu 4820 ms = 654%,  os 16 ms
 ntt64g b:  Butterfly: 921 ms = 11120 MiB/s,  cpu 6521 ms = 708%,  os 0 ms
@@ -139,7 +145,7 @@ ntt32m +b:  MFA_NTT<2^20,512,P=0xFFF00001>: 2169 ms = 236 MiB/s,  cpu 14040 ms =
 
 ---
 
-Comparison of slow O(N^2) NTT with fast alforithms:
+Comparison of slow O(N^2) NTT with fast algorithms:
 
 ```
 C:\!FreeArc\public\FastECC>timer ntt64g.exe s 20 32

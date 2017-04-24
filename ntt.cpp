@@ -378,7 +378,7 @@ void Rec_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
 template <typename T, T P>
 void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
 {
-    const size_t L2Cache = 64*1024;  // part of L2 cache owned by each CPU core/thread
+    const size_t L2Cache = 96*1024;  // part of L2 cache owned by each CPU core/thread
 
     // Split N-size problem into R rows * C columns
     size_t R = 1;   while (R*R < N)  R*=2;
