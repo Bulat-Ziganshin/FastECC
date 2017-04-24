@@ -340,7 +340,7 @@ void TransposeMatrix (T* data, size_t R, size_t C)
 
 // GF(P) NTT of N==2**X points of type T. Each point represented by SIZE elements (sequential in memory), so we perform SIZE transforms simultaneously
 template <typename T, T P>
-void Rec_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
+void Rec_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
 {
     // Fill roots[] with roots of 1 of powers N, N/2, ... 2;  root_ptr points after the last entry
     T root = GF_Root<T,P>(N),  roots[66],  *root_ptr = roots;
@@ -373,7 +373,7 @@ void Rec_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
 
 // The matrix Fourier algorithm (MFA)
 template <typename T, T P>
-void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
+void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
 {
     // Split N-size problem into R rows * C columns
     size_t R = 1;   while (R*R < N)  R*=2;
@@ -438,7 +438,7 @@ void MFA_NTT (size_t N, size_t SIZE, T** data, bool InvNTT)
 
 // Number theoretic transform by definition (slow - O(N^2)!)
 template <typename T, T P>
-void Slow_NTT (size_t N, size_t SIZE, T* data, bool InvNTT)
+void Slow_NTT (T* data, size_t N, size_t SIZE, bool InvNTT)
 {
     T *outdata = new T[N*SIZE];
 
@@ -475,7 +475,7 @@ void Slow_NTT (size_t N, size_t SIZE, T* data, bool InvNTT)
 #if NEVER
 // Generic driver handling any orders
 template <typename T, T P>
-void Generic_NTT (size_t N, size_t SIZE, T* data, bool InvNTT)
+void Generic_NTT (T* data, size_t N, size_t SIZE, bool InvNTT)
 {
     R = max. 2^n power of N
     C = N/R

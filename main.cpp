@@ -240,22 +240,22 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE, const char
 
     double processed_size = (P==0x10001? 0.5:1.0) * N*SIZE*sizeof(T);
 
-         if (RunOld)       time_it (processed_size, title, [&]{Rec_NTT <T,P> (N, SIZE, data, false);});
+         if (RunOld)       time_it (processed_size, title, [&]{Rec_NTT <T,P> (data, N, SIZE, false);});
     else if (RunNTT9)      time_it (processed_size, title, [&]{NTT9<T,P,false> (data, N/divider, SIZE);});
     else if (RunNTT6)      time_it (processed_size, title, [&]{NTT6<T,P,false> (data, N/divider, SIZE);});
     else if (RunNTT3)      time_it (processed_size, title, [&]{NTT3<T,P,false> (data, N/divider, SIZE);});
-    else if (RunCanonical) time_it (processed_size, title, [&]{Slow_NTT<T,P> (N, SIZE, data0,false);});
-    else                   time_it (processed_size, title, [&]{MFA_NTT <T,P> (N, SIZE, data, false);});
+    else if (RunCanonical) time_it (processed_size, title, [&]{Slow_NTT<T,P> (data0,N, SIZE, false);});
+    else                   time_it (processed_size, title, [&]{MFA_NTT <T,P> (data, N, SIZE, false);});
 
     uint32_t hash1 = hash(data, N, SIZE);    // hash after NTT
 
     // Inverse NTT
-         if (RunOld)       Rec_NTT <T,P> (N, SIZE, data, true);
+         if (RunOld)       Rec_NTT <T,P> (data, N, SIZE, true);
     else if (RunNTT9)      NTT9<T,P,true>(data, N/9, SIZE);
     else if (RunNTT6)      NTT6<T,P,true>(data, N/6, SIZE);
     else if (RunNTT3)      NTT3<T,P,true>(data, N/3, SIZE);
-    else if (RunCanonical) Slow_NTT<T,P> (N, SIZE, data0,true);
-    else                   MFA_NTT <T,P> (N, SIZE, data, true);
+    else if (RunCanonical) Slow_NTT<T,P> (data0,N, SIZE, true);
+    else                   MFA_NTT <T,P> (data, N, SIZE, true);
 
     // Normalize the result by dividing by N
     T inv_N = GF_Inv<T,P>(divider);
