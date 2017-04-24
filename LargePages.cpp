@@ -36,6 +36,7 @@ template< class T >
 T* VAlloc (uint64_t size)
 {
     size *= sizeof(T);
+    uint64_t PageMask = g_PageMask;
     uint64_t s = (size+g_PageMask) & (~g_PageMask);
     if (s > size_t(-1)) {
         return 0;
@@ -46,10 +47,11 @@ T* VAlloc (uint64_t size)
         r = VirtualAlloc(0, s, g_PageFlag, PAGE_READWRITE);       // alloc using 2 MB pages only if the size is no less than one page
     }
     if (r==0) {
-        printf("LargePage allocation failed\n");
+        PageMask = g_PageMask0;
         s = (size+g_PageMask0) & (~g_PageMask0);
         r = VirtualAlloc(0, size, g_PageFlag0, PAGE_READWRITE);   // alloc using 4 KB pages, if preceding attempt failed
     }
+    printf("Allocated with %s\n", PageMask==0x1ffff? "2MB pages": PageMask==0xfff? "4KB pages": "unknown pagesize");
     return (T*)r;
 }
 

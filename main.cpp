@@ -295,7 +295,8 @@ void Code (int argc, char **argv, const char* P_str)
 
 // Deal with argv[1] prefix:
 //   '=': switch to P=0x10001
-//   '-': switch to P=0xFFFFFFFF (not a primary number!)
+//   '-': switch to P=2^32-1 (not a primary number!)
+//   '+': switch to P=2^64-1 (not a primary number!)
 int main (int argc, char **argv)
 {
     InitLargePages();
@@ -318,10 +319,8 @@ int main (int argc, char **argv)
 
 /* to do:
 "b N SIZE" in cmdline
-ntt32*.exe/GF_Mul32 doesn't work with 65537, probably due to hardcoded assumptions about P in GF_Mul32
 replace "(res>X)*P" in GF_Sub with bit arithmetics (compiler can do it itself?)
 MS GF_Mul64 should became faster with the same algo as GCC one
-MFA_NTT: recursively split data into <=512 KB blocks
 IterativeNTT_Steps: optional extra twiddle factors in the last cycle so we can avoid them in MFA_NTT
 template<typename GF> {operators +-*^/; static constexpr const GF root3, root3_2...;}
 try to use "double" for GF(p)&Mod(p) operations, it may be faster
@@ -334,22 +333,22 @@ Order Multiplications
 5     6
 6     4
 7     14
-8     5 (4 with handmade code avoiding *-1)
+8     5
 9     16
 12    11
 13    34
-16    17 (14 with handmade code)
-32    42 = 2*14 + 32/2-2 (MFA)
+16    17
+32    49 = 2*17 + 32/2-1 (MFA)
 36    73 = 4*16 + 9*1
-64    114
+64    129
 65    248 = 5*34+13*6
-128   290
+128   321
 130   496
-256   706
+256   769
 260   1057
-512   1666
-520   2244 = 8*248+65*4
+512   1693
+520   2309 = 8*248+65*5
 585   3272 = 9*248+65*16
-1024  3842
-1040  4878 = 16*248+65*14
+1024  3897
+1040  5073 = 16*248+65*17
 */
