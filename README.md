@@ -32,7 +32,7 @@ FastECC employs Number-Theoretic Transform that is just an FFT over integer fiel
 Let's see how it works. Note that by `order-N polynoms` I mean polynoms with any order < N.
 
 For any given set of N points, only one order-N polynom may go through all these points.
-Let's consider N input words as values of some order-N polynom at N fixed points,
+Let's consider N input words as y-values of some order-N polynom at N fixed x-points,
 only one such polynom may exist.
 
 Typical Reed-Solomon encoding computes coefficients of this unique polynom (the so-called `polynom interpolation`),
@@ -42,6 +42,25 @@ and outputs these M words as the resulting ECC data.
 At the decoding stage, we may receive any subset of N values out of N source words and M computed ECC words.
 But since they all belong to the original order-N polynom, we may recover this polynom from N known points
 and then compute its values in other points, in particular those N points assigned to original data, thus restoring them.
+
+---
+
+Usually, Reed-Solomon libraries implement encoding by multiplication with Vandermonde matrix (`O(N^2)` algo)
+and decoding by multiplication with the matrix inverse.
+
+But with special choice of fixed x-points we can perform polynom interpolation and evaluation at these points
+in `O(N*log(N))` time, using NTT for evaluation and inverse NTT for interpolation. So, the fast encoding is as simple as:
+- consider N input words as values of order-N polynom in a special set of N x-points
+- compute the polynom coefficients in `O(N*log(N))` time using inverse NTT
+- evaluate the polynom at another M special x-points in `O(M*log(M))` time using NTT
+
+Decoding is more involved. We have N words representing values of order-N polynom at **some** N points.
+Since we can't choose these points, we can't just use iNTT to compute the polynom coefficients.
+But this is a generic `polynom interpolation` problem that can be solved in `O(N*log(N)^2)` time.
+Or we can use customized interpolation algorithm (described below)
+that can solve our specific problem in `O((N+M)*log(N+M))` time.
+In the usual case of M<=N, the algorithm require three NTT(2N) computations plus one NTT(N) computation,
+making it 3.5-7 times slower than NTT(N)+NTT(M) performed at encoding.
 
 
 ## More
