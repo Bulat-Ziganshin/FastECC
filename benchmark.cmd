@@ -3,17 +3,17 @@
 @set SIZE=%2
 @if %SIZE%.==. set SIZE=8192
 @for %%p in ("" "=" "-" "+") do @(
-    for %%e in (64g 64m 32g 32m) do @(
-        echo ntt%%e %%po %N% %SIZE%
-        ntt%%e %%po %N% %SIZE%
-        echo.
+    for %%e in (64g-avx2 64g-sse42 64g 64m 32g-avx2 32g-sse42 32g 32m) do @(
         echo ntt%%e %%pn %N% %SIZE%
-        ntt%%e %%pn %N% %SIZE%
+        ntt%%e .%%pn %N% %SIZE%
+        echo.
+        echo ntt%%e %%po %N% %SIZE%
+        ntt%%e .%%po %N% %SIZE%
         echo.
         echo ntt%%e %%pb
-        ntt%%e %%pb
+        ntt%%e .%%pb
         echo.
     )
 )    
 
-@for %e% in (64g 64m 32g 32m) do rs%e 19 4000
+@for %e% in (64g-avx2 64g-sse42 64g 64m 32g-avx2 32g-sse42 32g 32m) do rs%e . 19 4000
