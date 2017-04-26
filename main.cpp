@@ -180,9 +180,9 @@ int BenchButterfly()
 {
     T x=0;
     #pragma omp parallel for
-    for (int n=0; n<4096/sizeof(T); n++)
+    for (int n=0; n<2560/sizeof(T); n++)
     {
-        const int sz = 1280;
+        const int sz = 4096;
         T a[sz], b[sz];
         for (int i=0; i<sz; i++)
             a[i] = i*7+1, b[i] = i*15+8;
@@ -289,7 +289,7 @@ void Code (int argc, char **argv, const char* P_str)
     if (opt=='m')  {Test_GF_Mul<T,P>();  return;}
     if (opt=='r')  {FindRoot<T,P>(P==0xFFFFFFFFFFFFFFFF?(uint64_t(65536)*2*5*17449):P==0xFFFFFFFF?65536:P-1);  printf ("GF_Root %s\n", GF_Root<T,P>(2)==P-1? "OK": "failed");  return;}
     if (opt=='d')  {DividersDensity<T,P>();  return;}
-    if (opt=='b')  {time_it (10LL<<30, "Butterfly", [&]{BenchButterfly<T,P>();});  return;}
+    if (opt=='b')  {time_it ((P==0x10001? 1e10 : 2e10), "Butterfly", [&]{BenchButterfly<T,P>();});  return;}
 
     size_t N = 1<<19;   // NTT order
     size_t SIZE = 2052; // Block size, in bytes
