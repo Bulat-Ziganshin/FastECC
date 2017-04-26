@@ -4,6 +4,7 @@ const DWORD    g_PageFlag0 = 0x1000;
 const uint64_t g_PageMask0 = 0x1000-1;
 DWORD          g_PageFlag  = g_PageFlag0;
 uint64_t       g_PageMask  = g_PageMask0;
+bool verbose = true;
 
 
 #pragma comment(lib, "advapi32.lib")
@@ -51,7 +52,7 @@ T* VAlloc (uint64_t size)
         s = (size+PageMask) & (~PageMask);
         r = VirtualAlloc(0, size, g_PageFlag0, PAGE_READWRITE);   // alloc using 4 KB pages, if preceding attempt failed
     }
-    printf("Allocated %.0lf MiB with %s\n", s/1048576.0, PageMask==0x1fffff? "2MiB pages": PageMask==0xfff? "4KiB pages": "unknown pagesize");
+    if (verbose)  printf("Allocated %.0lf MiB with %s\n", s/1048576.0, PageMask==0x1fffff? "2MiB pages": PageMask==0xfff? "4KiB pages": "unknown pagesize");
     return (T*)r;
 }
 

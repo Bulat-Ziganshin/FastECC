@@ -72,6 +72,11 @@ int main (int argc, char **argv)
     size_t SIZE = 2052; // Block size, in bytes
                         // 1 GB total
 
+    if (argc>=2 && argv[1][0]=='.') {
+        argv[1]++;
+        verbose = false;
+        if (argv[1][0]==0)  argv++, argc--;
+    }
     if (argc>=2)  N = 1<<atoi(argv[1]);
     if (argc>=3)  SIZE = atoi(argv[2]);
 

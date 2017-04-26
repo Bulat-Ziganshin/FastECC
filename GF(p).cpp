@@ -8,7 +8,7 @@
 #endif
 
 #if _MSC_VER
-#define MSVC_ONLY
+#define MSVC_ONLY 1
 #endif
 
 #if __GNUC__ && defined(MY_CPU_64BIT)
@@ -75,7 +75,7 @@ constexpr T GF_Mul64 (T X, T Y)
     return T(res);
 }
 
-#elif MSVC_ONLY && defined(MY_CPU_64BIT)
+#elif defined(MSVC_ONLY) && defined(MY_CPU_64BIT)
 // Alternative GF_Mul64 implementation made with MSVC intrinsics
 
 template <typename T, T P>
@@ -127,7 +127,7 @@ constexpr T GF_Mul32 (T X, T Y)
 *** Optimized operations for various P *********************************************************************************
 ************************************************************************************************************************/
 
-#if 0 && MSVC_ONLY && defined(MY_CPU_64BIT)
+#if 0 && defined(MSVC_ONLY) && defined(MY_CPU_64BIT)
 // Optimized operations for P=0xFFF00001 (or any other 32-bit P)
 template <> constexpr uint32_t GF_Add<uint32_t,0xFFF00001> (uint32_t X, uint32_t Y)
 {
@@ -211,7 +211,7 @@ template <> constexpr uint64_t GF_Mul<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, 
     return c + (c<a);
 }
 
-#elif MSVC_ONLY && defined(MY_CPU_64BIT)
+#elif defined(MSVC_ONLY) && defined(MY_CPU_64BIT)
 
 template <> constexpr uint64_t GF_Add<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, uint64_t Y)
 {

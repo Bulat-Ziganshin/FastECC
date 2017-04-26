@@ -268,10 +268,11 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE, const char
 
     // Now we should have exactly the input data
     uint32_t hash2 = hash(data, N, SIZE);    // hash after NTT+iNTT
-    if (hash2 == hash0)
-        printf("Verified!  Original %.0lf,  after NTT: %.0lf\n", double(hash0), double(hash1));
-    else
+    if (hash2 == hash0) {
+        if (verbose)  printf("Verified!  Original %.0lf,  after NTT: %.0lf\n", double(hash0), double(hash1));
+    } else {
         printf("Checksum mismatch: original %.0lf,  after NTT: %.0lf,  after NTT+iNTT %.0lf\n", double(hash0), double(hash1), double(hash2));
+    }
 }
 
 
@@ -279,6 +280,10 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE, const char
 template <typename T, T P>
 void Code (int argc, char **argv, const char* P_str)
 {
+    if (argc>=2 && argv[1][0]=='.') {
+        argv[1]++;
+        verbose = false;
+    }
     char opt  =  (argc>=2?  argv[1][0] : ' ');
     if (opt=='i')  {Test_GF_Inv<T,P>();  return;}
     if (opt=='m')  {Test_GF_Mul<T,P>();  return;}
@@ -297,23 +302,31 @@ void Code (int argc, char **argv, const char* P_str)
     BenchNTT<T,P> (opt=='o', opt=='s', N, SIZE/sizeof(T), P_str);
 }
 
+
 // Deal with argv[1] prefix:
+//   '.': quiet mode (on success, print only benchmark results)
 //   '=': switch to P=0x10001
 //   '-': switch to P=2^32-1 (not a primary number!)
 //   '+': switch to P=2^64-1 (not a primary number!)
 int main (int argc, char **argv)
 {
     InitLargePages();
+    if (argc>=2 && argv[1][0]=='.') {
+        argv[1]++;
+        verbose = false;
+    }
     if (argc>=2 && argv[1][0]=='=') {
         argv[1]++;
         Code <uint32_t,0x10001> (argc, argv, "65537");
     } else if (argc>=2 && argv[1][0]=='-') {
         argv[1]++;
         Code <uint32_t,0xFFFFFFFF> (argc, argv, "2^32-1");
-#ifdef MY_CPU_64BIT
     } else if (argc>=2 && argv[1][0]=='+') {
+#ifdef MY_CPU_64BIT
         argv[1]++;
         Code <uint64_t,0xFFFFFFFFFFFFFFFF> (argc, argv, "2^64-1");
+#else         
+        printf("Computations modulo 2^64-1 are supported only in 64-bit program versions\n");
 #endif
     } else {
         Code <uint32_t,0xFFF00001> (argc, argv, "0xFFF00001");
