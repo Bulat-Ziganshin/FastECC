@@ -1,13 +1,14 @@
 
 ### Program usage
 
-`NTT [=|-][i|r|m|d|b|s|o|n] [N=20 [SIZE=512]]` - test/benchmark GF(p) and NTT implementations
+`NTT [.][=|-|+][i|r|m|d|b|s|o|n] [N=20 [SIZE=512]]` - test/benchmark GF(p) and NTT implementations
 
-First argument is one of chars "irmdbson", optionally prefixed with "=", "-" or "+" (character "n" may be omitted). Remaining arguments are used only for options "son".
+First argument is one of chars "irmdbson", optionally prefixed with "." for quiet mode and "=", "-" or "+" for GF(P) choice (character "n" may be omitted). Remaining arguments are used only for options "son".
 
 By default, all computations are performed in GF(0xFFF00001). Prefix "=" switches to GF(0x10001),
 while prefixes "-" and "+" switches to computations modulo 2^32-1 and 2^64-1, correspondingly.
-Note that 2^32-1 and 2^64-1 aren't prime numbers, nevertheless they support NTT up to order 65536, and more than 2x faster than computations in GF(0xFFF00001).
+Note that 2^32-1 and 2^64-1 aren't prime numbers, nevertheless they support NTT up to order 65536,
+and with proper implementation more than 2x faster than computations in GF(0xFFF00001).
 Computations modulo 2^32-1 and 2^64-1 require normalisation (GF_Normalize call) after all computations.
 
 The remainder of the first option is interpreted as following:
@@ -15,21 +16,25 @@ The remainder of the first option is interpreted as following:
 - m: test GF(p) implementation: check multiplication correctness (this check will also fail for computations modulo 2^n-1 since GF_Normalize isn't called here)
 - r: find primary root of maximum order (P-1 for primary P, 65536 for P=2^32-1)
 - d: check divisors count and density, i.e. average "distance" to the next largest divider of the field order
-- b: benchmark Butterfly operation (i.e. `a+b*K`) on 10 GB of input data (cosidered as 1.25G of (a,b) records). This is roughly equivalent to computing NTT(2^20) over 512 MB of data,
-but without overheads of NTT management - i.e. maximum NTT perfromance possible.
+- b: benchmark Butterfly operation (i.e. `a+b*K`) on 10 GiB of input data (cosidered as 1.25Gi of (a,b) records). This is roughly equivalent to computing NTT(2^21) over 1 GiB of data,
+but without overheads of NTT management - i.e. shows maximum NTT performance possible.
 - s: benchmark slow NTT (i.e. O(N^2) algo)
 - o: benchmark old, recursive radix-2 NTT implementation
 - n: benchmark new, faster MFA-based NTT implementation
 
-NTT algorithms are performed using 2^N blocks SIZE bytes each. By default, N=20 and SIZE=512, these values can be overwritten in cmdline.
+NTT algorithms are performed using 2^N blocks SIZE bytes each. By default, N=19 and SIZE=2052, other values can be specified as the second and third program option.
 For every NTT, inverse operation is also performed and program verifies that NTT+iNTT results are equivalent to original data.
+Incorrect results are reported like that:
+```
+Checksum mismatch: original 1690540224,  after NTT: 3386487444,  after NTT+iNTT 141226615
+```
 
 
 ### Performance
 
-Now the best possible performance of Reed-Solomon encoding is 600 MB/s on i7-4770 using ALL cores.
-It can be reached with 2^20 source blocks and 2^20 ECC blocks, each 4 KB large,
-i.e. encoding 2 GB of source data into 2 GB of ECC data, that is finished in 7 seconds.
+Now the best possible performance of Reed-Solomon encoding is 1 GB/s on i7-4770 using AVX2 and all cores.
+It can be reached with 2^19 source blocks and 2^19 ECC blocks, each 4 KB large,
+i.e. encoding 2 GB of source data into 2 GB of ECC data, that is finished in 4.2 seconds.
 
 With current implementation, maximum performance is reached only when all of the following conditions are met:
 - Block size >= 4 KB. Smaller block sizes means more cache misses, it can be avoided only by careful prefetching.
@@ -41,7 +46,7 @@ using order-N NTT, even if M is much smaller than N, so backward transform alway
 But when M<=N/2, it's possible to compute only even points of the second transform, thus halving the execution time - we just need to perform a[i]+=a[i+N/2] and then run NTT on the first N/2 points.
 When M<=N/4, we can compute only 1/4 of all points and so on, effectively running at the same effective speed as the first transform.
 
-If the final program version will implement all the features mentioned, it will run at ~10/logb(N) GB/s with SSE2, and twice as fast with AVX2 - for ANY source+ECC configuration.
+If the final program version will implement all the features mentioned, it will run at ~20/logb(N) GB/s with SSE2, and twice as fast with AVX2 - for ANY source+ECC configuration.
 
 The speed can be further doubled by using computations modulo 2^32-1 or 2^64-1, but these rings support only NTT of orders 2,4...65536.
 Since this base is already supported by underlying GF(p).cpp library, required changes in RS.cpp are trivial - replace 0xFFF00001 with 0xFFFFFFFF
@@ -51,38 +56,68 @@ and post-process ECC blocks with GF_Normalize prior to writing.
 ### Benchmarks
 
 Executables are compiled by:
+- `*64g-avx2`: 64-bit GCC 6.3 using AVX2 operations
+- `*64g-sse42`: 64-bit GCC 6.3 using SSE4.2 operations
 - `*64g`: 64-bit GCC 6.3
 - `*64m`: 64-bit MSVC 2017
-- `*32g`: 32-bit GCC 6.3
-- `*32m`: 32-bit MSVC 2017
+- `*32g-avx2`: 32-bit GCC 6.3 using AVX2 operations
+- `*32g-sse42`: 32-bit GCC 6.3 using SSE4.2 operations
+- `*32g`: 32-bit GCC 6.3 using SSE2 operations
+- `*32m`: 32-bit MSVC 2017 using SSE2 operations
 
-NOTE: currently, 32-bit executables are slower than 64-bit ones and MSVC-produced executables are slower than GCC-compiled ones.
-In the final version, main loops will be implemented with SSE2/AVX2 and have the same performance, irrespective of compiler and mode,
-probably similar to the current best (64-bit GCC) executables. So, for NTT(2^20) we expect 500+ MB/s for SSE2 version, and 1+ GB/s for AVX2 version.
+NOTE: currently, 32-bit executables are slower than 64-bit ones and executables built by MSVC are slower than GCC-compiled ones.
+In the final version, main loops will be implemented with SSE2/AVX2 and have the same performance, irrespective of compiler and mode.
+So, for NTT(2^20) we expect 1 GB/s for SSE2 version, and 2 GB/s for AVX2 version.
 
-Reed-Solomon encoding (2^19 + 2^19 source+ECC blocks, 2052 bytes each):
+Reed-Solomon encoding (2^19 + 2^19 source+ECC blocks, 2052 bytes each) in GF(0xFFF00001):
 ```
-rs64g:  3498 ms = 587 MiB/s,  cpu 24461 ms = 699%,  os 16 ms
-rs64m:  3850 ms = 533 MiB/s,  cpu 28236 ms = 733%,  os 1154 ms
-rs32g:  5278 ms = 389 MiB/s,  cpu 36738 ms = 696%,  os 16 ms
-rs32m:  6887 ms = 298 MiB/s,  cpu 52089 ms = 756%,  os 593 ms
+rs64g-avx2:   2163 ms = 949 MiB/s,  cpu 15132 ms = 700%,  os 0 ms
+rs64g-sse42:  2617 ms = 784 MiB/s,  cpu 18736 ms = 716%,  os 31 ms
+rs64g:        3430 ms = 598 MiB/s,  cpu 25428 ms = 741%,  os 31 ms
+rs64m:        3689 ms = 556 MiB/s,  cpu 27503 ms = 746%,  os 733 ms
+
+rs32g-avx2:   2221 ms = 924 MiB/s,  cpu 16037 ms = 722%,  os 16 ms
+rs32g-sse42:  2944 ms = 697 MiB/s,  cpu 18112 ms = 615%,  os 62 ms
+rs32g:        5095 ms = 403 MiB/s,  cpu 36473 ms = 716%,  os 16 ms
+rs32m:        5805 ms = 354 MiB/s,  cpu 44601 ms = 768%,  os 640 ms
 ```
 
 ---
 
-New MFA NTT , old recursive NTT and pure Butterfly operations in various GF(p) and rings:
+MFA NTT (2^19 blocks of 2052 bytes each) in GF(0xFFF00001):
 ```
-ntt64g n:  MFA_NTT<2^19,2052,P=0xFFF00001>: 1594 ms = 644 MiB/s,  cpu 11404 ms = 715%,  os 0 ms
-ntt64m n:  MFA_NTT<2^19,2052,P=0xFFF00001>: 1810 ms = 567 MiB/s,  cpu 13135 ms = 726%,  os 577 ms
-ntt32g n:  MFA_NTT<2^19,2052,P=0xFFF00001>: 2422 ms = 424 MiB/s,  cpu 16973 ms = 701%,  os 16 ms
-ntt32m n:  MFA_NTT<2^19,2052,P=0xFFF00001>: 2856 ms = 359 MiB/s,  cpu 21341 ms = 747%,  os 374 ms
+ntt64g-avx2:   949 ms = 1081 MiB/s,  cpu 6224 ms = 656%,  os 0 ms
+ntt64g-sse42:  1184 ms = 867 MiB/s,  cpu 8159 ms = 689%,  os 31 ms
+ntt64g:        1622 ms = 632 MiB/s,  cpu 10873 ms = 670%,  os 0 ms
+ntt64m:        1716 ms = 598 MiB/s,  cpu 12620 ms = 735%,  os 468 ms
 
-ntt64g o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 2819 ms = 364 MiB/s,  cpu 10296 ms = 365%,  os 0 ms
-ntt64m o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 3944 ms = 260 MiB/s,  cpu 18798 ms = 477%,  os 562 ms
-ntt32g o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 3440 ms = 298 MiB/s,  cpu 15584 ms = 453%,  os 0 ms
-ntt32m o:  Rec_NTT<2^19,2052,P=0xFFF00001>: 5146 ms = 199 MiB/s,  cpu 22059 ms = 429%,  os 296 ms
+ntt32g-avx2:   1002 ms = 1024 MiB/s,  cpu 6755 ms = 674%,  os 0 ms
+ntt32g-sse42:  1228 ms = 836 MiB/s,  cpu 8408 ms = 685%,  os 16 ms
+ntt32g:        2391 ms = 429 MiB/s,  cpu 17394 ms = 727%,  os 0 ms
+ntt32m:        2835 ms = 362 MiB/s,  cpu 21403 ms = 755%,  os 203 ms
+```
 
+---
 
+Raw Butterfly operation in GF(0xFFF00001) processing 20 GiB of data.
+NTT(2^N) require about N-1 Butterfly operations per element,
+so ideal NTT(2^19) implementation should be about 18x slower than the raw Butterfly:
+```
+ntt64g-avx2 b:   Butterfly: 834 ms = 24555 MiB/s,  cpu 5850 ms = 701%,  os 0 ms
+ntt64g-sse42 b:  Butterfly: 1191 ms = 17189 MiB/s,  cpu 8580 ms = 720%,  os 0 ms
+ntt64g b:        Butterfly: 1778 ms = 11520 MiB/s,  cpu 13135 ms = 739%,  os 0 ms
+ntt64m b:        Butterfly: 1064 ms = 9622 MiB/s,  cpu 8143 ms = 765%,  os 140 ms
+
+ntt32g-avx2 b:   Butterfly: 774 ms = 26469 MiB/s,  cpu 6037 ms = 780%,  os 0 ms
+ntt32g-sse42 b:  Butterfly: 1227 ms = 16688 MiB/s,  cpu 8518 ms = 694%,  os 0 ms
+ntt32g b:        Butterfly: 3160 ms = 6481 MiB/s,  cpu 23431 ms = 741%,  os 31 ms
+ntt32m b:        Butterfly: 1454 ms = 7044 MiB/s,  cpu 11279 ms = 776%,  os 94 ms
+```
+
+---
+
+MFA NTT, recursive NTT and raw Butterfly operations in various GF(P) and rings:
+```
 ntt64g n 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 737 ms = 694 MiB/s,  cpu 4820 ms = 654%,  os 16 ms
 ntt64g o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 1585 ms = 323 MiB/s,  cpu 3214 ms = 203%,  os 0 ms
 ntt64g b:  Butterfly: 921 ms = 11120 MiB/s,  cpu 6521 ms = 708%,  os 0 ms
@@ -148,7 +183,7 @@ ntt64m +b:  Butterfly: 341 ms = 30065 MiB/s,  cpu 1919 ms = 563%,  os 172 ms
 Comparison of slow O(N^2) NTT with fast algorithms:
 
 ```
-C:\!FreeArc\public\FastECC>timer ntt64g.exe s 20 32
+C:\>timer ntt64g.exe s 20 32
 Slow_NTT<2^20,32,P=0xFFF00001>: 9123729 ms = 0 MiB/s,  cpu 60703889 ms = 665%,  os 51808 ms
 Verified! Original 2679569933,  after NTT: 1187104119
 Kernel Time  =   101.041 = 00:01:41.041 =   0%
@@ -156,7 +191,7 @@ User Time    = 121412.286 = 33:43:32.286 = 665%
 Process Time = 121513.328 = 33:45:13.328 = 665%
 Global Time  = 18257.312 = 05:04:17.312 = 100%
 
-C:\!FreeArc\public\FastECC>timer ntt64g.exe o 20 32
+C:\>timer ntt64g.exe o 20 32
 Rec_NTT<2^20,32,P=0xFFF00001>: 322 ms = 99 MiB/s,  cpu 1264 ms = 393%,  os 0 ms
 Verified!  Original 2679569933,  after NTT: 1187104119
 Kernel Time  =     0.015 = 00:00:00.015 =   2%
@@ -164,7 +199,7 @@ User Time    =     1.778 = 00:00:01.778 = 308%
 Process Time =     1.794 = 00:00:01.794 = 310%
 Global Time  =     0.577 = 00:00:00.577 = 100%
 
-C:\!FreeArc\public\FastECC>timer ntt64g.exe n 20 32
+C:\>timer ntt64g.exe n 20 32
 MFA_NTT<2^20,32,P=0xFFF00001>: 124 ms = 258 MiB/s,  cpu 515 ms = 415%,  os 0 ms
 Verified!  Original 2679569933,  after NTT: 1187104119
 Kernel Time  =     0.000 = 00:00:00.000 =   0%
