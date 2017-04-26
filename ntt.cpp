@@ -405,7 +405,7 @@ void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
         root_r = GF_Mul<T,P> (root_r, roots[0]);    // next root of power N
     }
 
-    // MFA is impossible or inefficient
+    // MFA is impossible or will be inefficient
     if (N < 4  ||  N*SIZE*sizeof(T) < L2Cache)
     {
         IterativeNTT<T,P> (data, N, SIZE, root_ptr);

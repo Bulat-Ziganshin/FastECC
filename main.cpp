@@ -1,4 +1,4 @@
-/// Implementation of the Number-Theoretical Transform in GF(P) Galois field
+/// Benchmarks and tests of GF(p) and NTT implementations
 #include <iostream>
 #include <algorithm>
 #include <stdint.h>

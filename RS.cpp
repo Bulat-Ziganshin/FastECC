@@ -32,13 +32,14 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
         data[i] = data0 + i*SIZE;
 
     char title[99];
-    sprintf (title, "Reed-Solomon encoding (2^%.0lf + 2^%.0lf src+ecc blocks %.0lf bytes each)", logb(N), logb(N), SIZE*1.0*sizeof(T));
+    sprintf (title, "Reed-Solomon encoding (2^%.0lf source blocks => 2^%.0lf ECC blocks, %.0lf bytes each)", logb(N), logb(N), SIZE*1.0*sizeof(T));
 
     time_it (2.0*N*SIZE*sizeof(T), title, [&]
     {
         // 1. iNTT: polynom interpolation. We find coefficients of order-N polynom describing the source data
         MFA_NTT <T,P> (data, N, SIZE, true);
-
+        // Now we should divide results by N in order to get coefficients, but we combined this operation with the multiplication below
+        
         // Now we can evaluate the polynom at 2*N points.
         // Points with even index will contain the source data,
         // while points with odd indexes may be used as ECC data.
@@ -47,14 +48,14 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
 
         // 2. Multiply the polynom coefficents by root(2*N)**i
         T root = GF_Root<T,P>(2*N);
-        T root_i = root;                            // root**1
+        T root_i = GF_Inv<T,P>(N);                  // root**0 / N (combine division by N with multiplication by powers of the root)
         #pragma omp parallel for
-        for (ptrdiff_t i=1; i<N; i++) {
+        for (ptrdiff_t i=0; i<N; i++) {
             T* __restrict__ block = data[i];
             for (size_t k=0; k<SIZE; k++) {         // cycle over SIZE elements of the single block
                 block[k] = GF_Mul<T,P> (block[k], root_i);
             }
-            root_i = GF_Mul<T,P> (root_i, root);    // root**i for the next i
+            root_i = GF_Mul<T,P> (root_i, root);    // root**i / N for the next i
         }
 
         // 3. NTT: polynom evaluation. This evaluates the modified polynom at root(N)**i points,
