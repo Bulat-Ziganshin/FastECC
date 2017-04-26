@@ -7,6 +7,10 @@
 #define MY_CPU_64BIT
 #endif
 
+#if _MSC_VER
+#define MSVC_ONLY
+#endif
+
 #if __GNUC__ && defined(MY_CPU_64BIT)
 #include <inttypes.h>
 typedef unsigned __int128 uint128_t;
@@ -19,7 +23,7 @@ typedef unsigned __int128 uint128_t;
 
 
 /***********************************************************************************************************************
-*** GF(P) **************************************************************************************************************
+*** Main operations in GF(P) *******************************************************************************************
 ************************************************************************************************************************/
 
 // Twice wider type to hold intermediate MUL results
@@ -71,7 +75,7 @@ constexpr T GF_Mul64 (T X, T Y)
     return T(res);
 }
 
-#elif _MSC_VER && defined(MY_CPU_64BIT)
+#elif MSVC_ONLY && defined(MY_CPU_64BIT)
 // Alternative GF_Mul64 implementation made with MSVC intrinsics
 
 template <typename T, T P>
@@ -112,11 +116,34 @@ constexpr T GF_Mul32 (T X, T Y)
     return T(res>=P? res-P : res);
 }
 
-#ifdef MY_CPU_64BIT
+#if defined(MY_CPU_64BIT) && !defined(USE_GF_Mul32)
 #define GF_Mul GF_Mul64
 #else
 #define GF_Mul GF_Mul32
 #endif
+
+
+/***********************************************************************************************************************
+*** Optimized operations for various P *********************************************************************************
+************************************************************************************************************************/
+
+#if 0 && MSVC_ONLY && defined(MY_CPU_64BIT)
+// Optimized operations for P=0xFFF00001 (or any other 32-bit P)
+template <> constexpr uint32_t GF_Add<uint32_t,0xFFF00001> (uint32_t X, uint32_t Y)
+{
+    uint32_t res, temp;
+    auto carry = _addcarry_u32(0,X,Y,&temp);
+    return temp - (carry? 0xFFF00001 : 0);
+}
+
+template <> constexpr uint32_t GF_Sub<uint32_t,0xFFF00001> (uint32_t X, uint32_t Y)
+{
+    uint32_t res, temp;
+    auto carry = _subborrow_u32(0,X,Y,&temp);
+    return temp + (carry? 0xFFF00001 : 0);
+}
+#endif
+
 
 // Optimized operations for P=0x10001
 template <> constexpr uint32_t GF_Add<uint32_t,0x10001> (uint32_t X, uint32_t Y)
@@ -184,7 +211,7 @@ template <> constexpr uint64_t GF_Mul<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, 
     return c + (c<a);
 }
 
-#elif _MSC_VER && defined(MY_CPU_64BIT)
+#elif MSVC_ONLY && defined(MY_CPU_64BIT)
 
 template <> constexpr uint64_t GF_Add<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, uint64_t Y)
 {
@@ -209,6 +236,10 @@ template <> constexpr uint64_t GF_Mul<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t X, 
 }
 #endif
 
+
+/***********************************************************************************************************************
+*** Extra operations in GF(P) ******************************************************************************************
+************************************************************************************************************************/
 
 template <typename T, T P>
 constexpr T GF_Pow (T X, T N)
