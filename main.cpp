@@ -325,7 +325,7 @@ int main (int argc, char **argv)
 #ifdef MY_CPU_64BIT
         argv[1]++;
         Code <uint64_t,0xFFFFFFFFFFFFFFFF> (argc, argv, "2^64-1");
-#else         
+#else
         printf("Computations modulo 2^64-1 are supported only in 64-bit program versions\n");
 #endif
     } else {
@@ -341,6 +341,7 @@ MS GF_Mul64 should became faster with the same algo as GCC one
 IterativeNTT_Steps: optional extra twiddle factors in the last cycle so we can avoid them in MFA_NTT
 template<typename GF> {operators +-*^/; static constexpr const GF root3, root3_2...;}
 try to use "double" for GF(p)&Mod(p) operations, it may be faster
+    mul/div polynomials in RS decoder?
 std::async: http://www.numberworld.org/y-cruncher/guides/multithreading.html
 
 Order Multiplications
@@ -357,14 +358,22 @@ Order Multiplications
 16    17
 32    49 = 2*17 + 32/2-1 (MFA)
 36    73 = 4*16 + 9*1
+40    73 = 5*5+8*6
+48    83 = 3*17+16*2
+56    147 = 7*5+8*14
 64    129
 65    248 = 5*34+13*6
 128   321
 130   496
 256   769
 260   1057
+288   953 = 9*49+32*16
+320   1029 = 5*129+64*6
+384   1219 = 3*321+128*2
+448   1799 = 7*129+64*14
 512   1693
 520   2309 = 8*248+65*5
+576   2185 = 9*129+64*16
 585   3272 = 9*248+65*16
 1024  3897
 1040  5073 = 16*248+65*17

@@ -15,9 +15,9 @@ Once you grasped all these topics, you can grab some FFT implementation and conv
 
 # NTT meaning
 
-If source vector `A = (A0, A1...A[n-1])` represents polynomial `A(x) = A0 + A1*x + ... + A[n-1]*x**(n-1)`, then NTT(A,a) computes polynomial values at the points `1, a, a**2 ... a**(n-1)`, representing `n` roots of power `n` of 1 (if `a` is a primitive root of power `n` of 1). It's equivalent to multiplying vector `A` to [Vandermonde Matrix](https://en.wikipedia.org/wiki/Vandermonde_matrix) defined by these points. So, NTT converts polynom coefficients to polynom values at these specific points, and iNTT (inverse NTT) reverses this transformation. iNTT is almost the same as NTT, i.e. `iNTT(A,a) = NTT(A,-a)/n` (with an element-wise division) reverses the effect of `NTT(A,a)`.
+If source vector `A = (A0, A1...A[n-1])` represents polynomial `A(x) = A0 + A1*x + ... + A[n-1]*x**(n-1)`, then NTT(A,a) computes polynomial values at the points `1, a, a**2 ... a**(n-1)`, representing `n` roots of power `n` of 1 (if `a` is a primitive root of power `n` of 1). It's equivalent to multiplying vector `A` to [Vandermonde Matrix](https://en.wikipedia.org/wiki/Vandermonde_matrix) defined by these points. So, NTT converts polynomial coefficients to polynomial values at these specific points, and iNTT (inverse NTT) reverses this transformation. iNTT is almost the same as NTT, i.e. `iNTT(A,a) = NTT(A,-a)/n` (with an element-wise division) reverses the effect of `NTT(A,a)`.
 
-This means that `NTT(A,a)` provides us the fast way to convert polynom coefficients `A` to values at `a**i` points and vice versa.
+This means that `NTT(A,a)` provides us the fast way to convert polynomial coefficients `A` to values at `a**i` points and vice versa.
 
 # RS meaning
 

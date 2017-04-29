@@ -1,4 +1,4 @@
-/// Implementation of the Reed-Solomon algo in O(N*log(N)) using Number-Theoretical Transform in GF(P)
+/// Implementation of the Reed-Solomon algo in O(N*log(N)) using Number-Theoretical Transform in GF(p)
 #include <iostream>
 #include <algorithm>
 #include <stdint.h>
@@ -31,22 +31,22 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
     for (size_t i=0; i<N; i++)
         data[i] = data0 + i*SIZE;
 
-    char title[99];
+    char title[999];
     sprintf (title, "Reed-Solomon encoding (2^%.0lf source blocks => 2^%.0lf ECC blocks, %.0lf bytes each)", logb(N), logb(N), SIZE*1.0*sizeof(T));
 
     time_it (2.0*N*SIZE*sizeof(T), title, [&]
     {
-        // 1. iNTT: polynom interpolation. We find coefficients of order-N polynom describing the source data
-        MFA_NTT <T,P> (data, N, SIZE, true);
+        // 1. iNTT: polynomial interpolation. We find coefficients of order-N polynomial describing the source data
+        MFA_NTT<T,P> (data, N, SIZE, true);
         // Now we should divide results by N in order to get coefficients, but we combined this operation with the multiplication below
-        
-        // Now we can evaluate the polynom at 2*N points.
+
+        // Now we can evaluate the polynomial at 2*N points.
         // Points with even index will contain the source data,
         // while points with odd indexes may be used as ECC data.
         // But more efficient approach is to compute only odd-indexed points.
         // This is accomplished by the following steps:
 
-        // 2. Multiply the polynom coefficents by root(2*N)**i
+        // 2. Multiply the polynomial coefficients by root(2*N)**i
         T root = GF_Root<T,P>(2*N);
         T root_i = GF_Inv<T,P>(N);                  // root**0 / N (combine division by N with multiplication by powers of the root)
         #pragma omp parallel for
@@ -58,14 +58,15 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
             root_i = GF_Mul<T,P> (root_i, root);    // root**i / N for the next i
         }
 
-        // 3. NTT: polynom evaluation. This evaluates the modified polynom at root(N)**i points,
-        // equivalent to evaluation of the original polynom at root(2*N)**(2*i+1) points.
-        MFA_NTT <T,P> (data, N, SIZE, false);
+        // 3. NTT: polynomial evaluation. This evaluates the modified polynomial at root(N)**i points,
+        // that is equivalent to evaluation of the original polynomial at root(2*N)**(2*i+1) points.
+        MFA_NTT<T,P> (data, N, SIZE, false);
 
         // Further optimization: in order to compute only even-indexed points,
         // it's enough to compute order-N/2 NTT of data[i]+data[i+N/2]. And so on...
     });
 }
+
 
 int main (int argc, char **argv)
 {

@@ -41,7 +41,7 @@ With current implementation, maximum performance is reached only when all of the
 - Number of source blocks is 2^N. Current implementation supports only NTT of orders 2^N, so number of blocks is rounded up to the next 2^N value, thus making real performance up to 2x lower.
 We need to implement PFA NTT as well as NTT kernels of orders 3,5,7,9,13 (since `0xFFF00000 = 2^20*3*3*5*7*13`) in order to get efficient support of arbitrary block counts.
 0xFFF00000 has 504 dividers, so for random N the next divider of 0xFFF00000 is only a few percents larger than N itself.
-- Number of ECC blocks (M) is equal to the number of source blocks (N). Current implementation performs backward transform (from N polynom coefficients to ECC block values)
+- Number of ECC blocks (M) is equal to the number of source blocks (N). Current implementation performs backward transform (from N polynomial coefficients to ECC block values)
 using order-N NTT, even if M is much smaller than N, so backward transform always takes the same time as the forward one, making its effective speed N/M times lower.
 But when M<=N/2, it's possible to compute only even points of the second transform, thus halving the execution time - we just need to perform a[i]+=a[i+N/2] and then run NTT on the first N/2 points.
 When M<=N/4, we can compute only 1/4 of all points and so on, effectively running at the same effective speed as the first transform.
@@ -56,20 +56,20 @@ and post-process ECC blocks with GF_Normalize prior to writing.
 ### Benchmarks
 
 Executables are compiled by:
-- `*64g-avx2`: 64-bit GCC 6.3 using AVX2 operations
-- `*64g-sse42`: 64-bit GCC 6.3 using SSE4.2 operations
+- `*64g-avx2`: 64-bit GCC 6.3 with AVX2
+- `*64g-sse42`: 64-bit GCC 6.3 with SSE4.2
 - `*64g`: 64-bit GCC 6.3
 - `*64m`: 64-bit MSVC 2017
-- `*32g-avx2`: 32-bit GCC 6.3 using AVX2 operations
-- `*32g-sse42`: 32-bit GCC 6.3 using SSE4.2 operations
-- `*32g`: 32-bit GCC 6.3 using SSE2 operations
-- `*32m`: 32-bit MSVC 2017 using SSE2 operations
+- `*32g-avx2`: 32-bit GCC 6.3 with AVX2
+- `*32g-sse42`: 32-bit GCC 6.3 with SSE4.2
+- `*32g`: 32-bit GCC 6.3 with SSE2
+- `*32m`: 32-bit MSVC 2017 with SSE2
 
 NOTE: currently, 32-bit executables are slower than 64-bit ones and executables built by MSVC are slower than GCC-compiled ones.
 In the final version, main loops will be implemented with SSE2/AVX2 and have the same performance, irrespective of compiler and mode.
 So, for NTT(2^20) we expect 1 GB/s for SSE2 version, and 2 GB/s for AVX2 version.
 
-Reed-Solomon encoding (2^19 + 2^19 source+ECC blocks, 2052 bytes each) in GF(0xFFF00001):
+Reed-Solomon encoding (2^19 source blocks => 2^19 ECC blocks, 2052 bytes each) in GF(0xFFF00001):
 ```
 rs64g-avx2:   2163 ms = 949 MiB/s,  cpu 15132 ms = 700%,  os 0 ms
 rs64g-sse42:  2617 ms = 784 MiB/s,  cpu 18736 ms = 716%,  os 31 ms
