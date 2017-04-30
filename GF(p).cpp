@@ -117,10 +117,16 @@ constexpr T GF_Mul32 (T X, T Y)
 
     DoubleT res = DoubleT(X)*Y;
     res  -=  ((res + (res>>32)*invP32) >> 32) * P;    // The same as res -= ((res*invP) >> 64) * P, where invP = (2**64)/P, but optimized for 32-bit computations
-    return T(res>=P? res-P : res);
+
+#if (SIMD < SSE2)
+    return T(res>=P? res-P : res);                    // optimized for scalar/GPU code
+#else
+    return T(res-P) + (T((res-P)>>32) & P);           // optimized for SIMD code
+    // return T(res) - (T((P-res)>>32)&P);            // alternative SIMD-optimized code
+#endif
 }
 
-#if defined(MY_CPU_64BIT) && SIMD<SSE42
+#if defined(MY_CPU_64BIT) && SIMD<SSE2
 #define GF_Mul GF_Mul64
 #else
 #define GF_Mul GF_Mul32
