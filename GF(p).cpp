@@ -1,4 +1,7 @@
 /// Implementation of the GF(P) Galois field
+
+#include "SIMD.h"
+
 #if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
 #define MY_CPU_AMD64
 #endif
@@ -103,6 +106,7 @@ constexpr T GF_Mul64 (T X, T Y)
 #endif
 
 // GF_Mul32 is optimized for 32-bit CPUs, SIMD and GPUs
+// It can vectorized by GCC 6 and Clang 4.0, but only for SSE>=4.2 (since 64-bit comparison "res>=P" is translated to PCMPGTQ)
 template <typename T, T P>
 constexpr T GF_Mul32 (T X, T Y)
 {
@@ -116,7 +120,7 @@ constexpr T GF_Mul32 (T X, T Y)
     return T(res>=P? res-P : res);
 }
 
-#if defined(MY_CPU_64BIT) && !defined(USE_GF_Mul32)
+#if defined(MY_CPU_64BIT) && SIMD<SSE42
 #define GF_Mul GF_Mul64
 #else
 #define GF_Mul GF_Mul32
@@ -277,7 +281,7 @@ template <> constexpr uint64_t GF_Root<uint64_t,0xFFFFFFFFFFFFFFFF> (uint64_t N)
     //assert (uint64_t(65536)*3*5*17449) % N  ==  0);
     return GF_Pow<uint64_t,0xFFFFFFFFFFFFFFFF> (main_root, (uint64_t(65536)*3*5*17449) / N);
 }
-#endif        
+#endif
 
 
 template <typename T, T P>
