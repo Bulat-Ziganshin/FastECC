@@ -6,23 +6,21 @@ Version 0.1 implements only encoding, so it isn't yet ready for real use.
 
 ## What
 
-Almost all existing Reed-Solomon ECC implementations have `O(N^2)` speed behavior,
+Almost all existing Reed-Solomon ECC implementations employ matrix multiplication and thus have `O(N^2)` speed behavior,
 i.e. they can produce N ECC blocks in `O(N^2)` time, thus spending `O(N)` time per block.
 F.e. the fastest implementation I know, [MultiPar2], can compute 1000 ECC blocks at the speed ~50MB/s,
 but only at ~2 MB/s in its maximum configuration, 32000 ECC blocks.
-And 32-bit GF, implemented in the same way, will compute one million ECC blocks at 50 KB/s.
+And computations in GF(2^32), implemented in the same way, will build one million ECC blocks at 50 KB/s.
 
-The only exception is [RSC32 by persicum] with `O(N*log(N))` speed,
-i.e. it spends `O(log(N))` time per ECC block.
-Its speed with million ECC blocks is 100 MB/s,
-i.e. it computes one million of 4 KB ECC blocks from one million of source blocks
-(processing 8 GB overall) in just 80 seconds.
+The only exception is [RSC32 by persicum] with `O(N*log(N))` speed, i.e. it spends `O(log(N))` time per ECC block.
+Its speed with million ECC blocks is 100 MB/s, i.e. it computes one million of 4 KB ECC blocks
+from one million of source blocks (processing 8 GB overall) in just 80 seconds.
 Note that all speeds mentioned here are measured on i7-4770, employing all features available in a particular program -
 including multi-threading, SIMD and x64 support.
 
 FastECC is open-source library implementing `O(N*log(N))` encoding algorithm.
-Depending on SIMD extension used, it's 4-10 times faster than RSC32, computing million ECC blocks at 400-1000 MB/s.
-Future versions will implement decoding that's also `O(N*log(N))`, although 4-7 times slower than encoding.
+Depending on SIMD extension used, it's 7-10 times faster than RSC32, computing million ECC blocks at 700-1000 MB/s.
+Future versions will implement decoding that's also `O(N*log(N))`, although 1.5-3 times slower than encoding.
 Current implementation is limited to 2^20 blocks, removing this limit is the main priority for future work
 aside of decoder implementation.
 
@@ -63,11 +61,41 @@ in `O(N*log(N))` time, using NTT for evaluation and inverse NTT for interpolatio
 
 Decoding is more involved. We have N words representing values of order-N polynomial at **some** N points.
 Since we can't choose these points, we can't just use iNTT to compute the polynomial coefficients.
-So it is a generic [polynomial interpolation] problem that can be solved in `O(N*log(N)^2)` time.
-Or we can use customized interpolation algorithm (described below)
-that can solve our specific problem in `O((N+M)*log(N+M))` time.
-In the usual case of M<=N, the algorithm require three NTT(2*N) computations plus one NTT(N) computation,
-making it 3.5-7 times slower than NTT(N)+NTT(M) performed on encoding.
+So it's a generic [polynomial interpolation] problem that can be solved in [O(N*log(N)^2) time][fast polynomial interpolation].
+
+
+<a name="faster"/>
+
+## Faster
+
+But this specific polynomial interpolation problem has faster solution.
+Indeed, decoder knows values of order-N polynomial f(x) at N points a[i], but lost its values at M erasure points e[i].
+Let's build "erasure locator" polynomial `l(x) = (x-e[1])*...*(x-e[M])` and compute polynomial product `p(x)=f(x)*l(x)`.
+We have `order(p) = order(f)+order(l) < N+M` and l(e[i])=0, so by computing values l(a[i]) and then multiplying f(x) and l(x) in the value space
+we can build polynomial p(x) with order<N+M described by its values at N+M points `p(a[i]) = f(a[i])*l(a[i]),  p(e[i]) = f(e[i])*l(e[i]) = 0`,
+i.e. we have fully defined p(x).
+
+Now we just need to perform [polynomial division] f(x)=p(x)/l(x), that is [O(N*log(N)) operation][fast polynomial division].
+
+
+<a name="fastest"/>
+
+## Fastest
+
+But there is even faster algorithm! Let's build derivative `p'(x) = f'(x)*l(x) + f(x)*l'(x)`
+and evaluate it at e[i]: `p'(e[i]) = f'(e[i])*l(e[i]) + f(e[i])*l'(e[i]) = f(e[i])*l'(e[i])` since l(e[i])=0.
+Moreover, l'(e[i])!=0, so we can recover all the lost f(e[i]) values by simple division: `f(e[i]) = p'(e[i]) / l'(e[i])`!!!
+
+So, the entire algorithm is:
+- transform polynomials p and l into the coefficient space
+- compute their derivatives p' and l'
+- transform p' and l' into the value space
+- evaluate each `f(e[i]) = p'(e[i]) / l'(e[i])`
+
+When M<=N, first operation on p is iNTT(2N),
+third operation on p' is NTT(N) since we need to compute p'(x) values only at N points corresponding to original data,
+and rest is either O(N) or operations on l(x) that is performed only once,
+so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations performed on encoding.
 
 
 <a name="more"/>
@@ -76,12 +104,17 @@ making it 3.5-7 times slower than NTT(N)+NTT(M) performed on encoding.
 
 - [NTT: Number-theoretic transform](Overview.md): what one needs to know in order to implement O(N*log(N)) Reed-Solomon error-correcting codes
 - [GF(p).cpp: fast computations in integer rings and fields](GF.md)
-- [NTT.cpp: NTT implementation plus benchmarks](NTT.md)
+- [NTT.cpp: NTT implementation and benchmarks](NTT.md)
 - [RS.cpp: Reed-Solomon coder](RS.md)
 
+
+<a name="links"/>
 
 [Reed-Solomon coder]: https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction
 [MultiPar2]: https://www.livebusinesschat.com/smf/index.php?board=396.0
 [RSC32 by persicum]: https://www.livebusinesschat.com/smf/index.php?board=399.0
-[polynomial interpolation]: https://en.wikipedia.org/wiki/Polynomial_interpolation
 [Vandermonde matrix]: https://en.wikipedia.org/wiki/Vandermonde_matrix
+[polynomial division]: https://en.wikipedia.org/wiki/Polynomial_long_division
+[fast polynomial division]: https://www.google.com/search?q=fast+polynomial+division
+[polynomial interpolation]: https://en.wikipedia.org/wiki/Polynomial_interpolation
+[fast polynomial interpolation]: https://www.google.com/search?q=fast+polynomial+interpolation
