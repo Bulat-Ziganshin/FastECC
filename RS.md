@@ -48,13 +48,13 @@ This allows us to build even more efficient algorithm:
 2. Multiply them: h(x) = p(x)*g(x)
 3. Compute p(x) = h(x) / g(x)
 
-On the first sight, it looks meaningless. The catch is that g(x) is so special that p(x)*g(x) product can be fully although we know p(x) values only at N points.
+On the first sight, it looks meaningless. The catch is that g(x) is so special that p(x)*g(x) product can be fully defined although we know p(x) values only at N points.
 
 Let's denote points where p(x) values was lost as z[j], j=1..M. So, we have:
 ```
 p(x[1..N],z[1..M]) = (y[1..N], ?[1..M])
 ```
-We will use the following polynomial g(x) = (x-z[1])*....*(x-z[M]). It will have the following values at the same points:
+We will use the following polynomial `g(x) = (x-z[1])*....*(x-z[M])`. It will have the following values at the same points:
 ```
 g(x[1..N],z[1..M]) = (g[1..N], 0,0..0)
 ```

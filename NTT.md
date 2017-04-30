@@ -16,13 +16,13 @@ The remainder of the first option is interpreted as following:
 - m: test GF(p) implementation: check multiplication correctness (this check will also fail for computations modulo 2^n-1 since GF_Normalize isn't called here)
 - r: find primary root of maximum order (P-1 for primary P, 65536 for P=2^32-1)
 - d: check divisors count and density, i.e. average "distance" to the next largest divider of the field order
-- b: benchmark Butterfly operation (i.e. `a+b*K`) on 10 GiB of input data (cosidered as 1.25Gi of (a,b) records). This is roughly equivalent to computing NTT(2^21) over 1 GiB of data,
+- b: benchmark Butterfly operation (i.e. `a+b*K`) on 20 GiB of input data (cosidered as 2.5Gi of (a,b) pairs). This is roughly equivalent to computing NTT(2^21) over 1 GiB of data,
 but without overheads of NTT management - i.e. shows maximum NTT performance possible.
 - s: benchmark slow NTT (i.e. O(N^2) algo)
 - o: benchmark old, recursive radix-2 NTT implementation
 - n: benchmark new, faster MFA-based NTT implementation
 
-NTT algorithms are performed using 2^N blocks SIZE bytes each. By default, N=19 and SIZE=2052, other values can be specified as the second and third program option.
+NTT algorithms are performed using 2^N blocks SIZE bytes each. By default, N=19 and SIZE=2052, other values can be specified as the second and third program options.
 For every NTT, inverse operation is also performed and program verifies that NTT+iNTT results are equivalent to original data.
 Incorrect results are reported like that:
 ```
@@ -33,11 +33,11 @@ Checksum mismatch: original 1690540224,  after NTT: 3386487444,  after NTT+iNTT 
 ### Performance
 
 Now the best possible performance of Reed-Solomon encoding is 1 GB/s on i7-4770 using AVX2 and all cores.
-It can be reached with 2^19 source blocks and 2^19 ECC blocks, each 4 KB large,
-i.e. encoding 2 GB of source data into 2 GB of ECC data, that is finished in 4.2 seconds.
+It can be reached with 2^19 source blocks and 2^19 ECC blocks, each 2 KiB large,
+i.e. encoding 1 GiB of source data into 1 GiB of ECC data, that is finished in 2.2 seconds.
 
 With current implementation, maximum performance is reached only when all of the following conditions are met:
-- Block size >= 4 KB. Smaller block sizes means more cache misses, it can be avoided only by careful prefetching.
+- Block size >= 2 KB. Smaller block sizes means more cache misses, it can be avoided only by careful prefetching.
 - Number of source blocks is 2^N. Current implementation supports only NTT of orders 2^N, so number of blocks is rounded up to the next 2^N value, thus making real performance up to 2x lower.
 We need to implement PFA NTT as well as NTT kernels of orders 3,5,7,9,13 (since `0xFFF00000 = 2^20*3*3*5*7*13`) in order to get efficient support of arbitrary block counts.
 0xFFF00000 has 504 dividers, so for random N the next divider of 0xFFF00000 is only a few percents larger than N itself.
