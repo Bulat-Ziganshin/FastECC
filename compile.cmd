@@ -19,12 +19,12 @@ cl -Fe%name%64m.exe -Fa%name%64.asm %options_ms_cl% %options_ms_x64%
 call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Tools\VsDevCmd.bat" -arch=x86 -host_arch=x64 -no_logo
 cl -Fe%name%32m.exe -Fa%name%32.asm -arch:SSE2 %options_ms_cl% %options_ms_x86%
 
-::g++ -std=c++14 -m64 -O3 %main% -static -fopenmp -o%name%64g-avx2  -mavx2   -DUSE_GF_Mul32
-::g++ -std=c++14 -m64 -O3 %main% -static -fopenmp -o%name%64g-sse42 -msse4.2 -DUSE_GF_Mul32
-::g++ -std=c++14 -m64 -O3 %main% -static -fopenmp -o%name%64g      
-::g++ -std=c++14 -m32 -O3 %main% -static -fopenmp -o%name%32g-avx2  -mavx2   -Xlinker --large-address-aware 
-::g++ -std=c++14 -m32 -O3 %main% -static -fopenmp -o%name%32g-sse42 -msse4.2 -Xlinker --large-address-aware 
-::g++ -std=c++14 -m32 -O3 %main% -static -fopenmp -o%name%32g       -msse2   -Xlinker --large-address-aware 
+::g++ -std=c++14 -m64 -O3 %main% -static -fopenmp -o%name%64g-avx2 -mavx2 -DSIMD=AVX2
+::g++ -std=c++14 -m64 -O3 %main% -static -fopenmp -o%name%64g-sse2        -DSIMD=SSE2
+::g++ -std=c++14 -m64 -O3 %main% -static -fopenmp -o%name%64g
+::g++ -std=c++14 -m32 -O3 %main% -static -fopenmp -o%name%32g-avx2 -mavx2 -DSIMD=AVX2 -Xlinker --large-address-aware
+::g++ -std=c++14 -m32 -O3 %main% -static -fopenmp -o%name%32g-sse2 -msse2 -DSIMD=SSE2 -Xlinker --large-address-aware
+::g++ -std=c++14 -m32 -O3 %main% -static -fopenmp -o%name%32g      -mmmx              -Xlinker --large-address-aware
 
 ::cl -Feprime.exe -O2 -EHsc prime.cpp
 
