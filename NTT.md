@@ -55,46 +55,46 @@ and post-process ECC blocks with GF_Normalize prior to writing.
 
 ### Benchmarks
 
-Executables are compiled by:
-- `*64g-avx2`: 64-bit GCC 6.3 with AVX2
-- `*64g-sse42`: 64-bit GCC 6.3 with SSE4.2
+Executables are compiled by (-DSIMD selects vectorizable code paths):
+- `*64g-avx2`: 64-bit GCC 6.3 with -DSIMD=AVX2 -mavx2
+- `*64g-sse2`: 64-bit GCC 6.3 with -DSIMD=SSE2
 - `*64g`: 64-bit GCC 6.3
 - `*64m`: 64-bit MSVC 2017
-- `*32g-avx2`: 32-bit GCC 6.3 with AVX2
-- `*32g-sse42`: 32-bit GCC 6.3 with SSE4.2
-- `*32g`: 32-bit GCC 6.3 with SSE2
-- `*32m`: 32-bit MSVC 2017 with SSE2
+- `*32g-avx2`: 32-bit GCC 6.3 with -DSIMD=AVX2 -mavx2
+- `*32g-sse2`: 32-bit GCC 6.3 with -DSIMD=SSE2 -msse2
+- `*32g`: 32-bit GCC 6.3
+- `*32m`: 32-bit MSVC 2017 with -arch:SSE2
 
-NOTE: currently, 32-bit executables are slower than 64-bit ones and executables built by MSVC are slower than GCC-compiled ones.
-In the final version, main loops will be implemented with SSE2/AVX2 and have the same performance, irrespective of compiler and mode.
-So, for NTT(2^20) we expect 1 GB/s for SSE2 version, and 2 GB/s for AVX2 version.
+NOTE: currently, executables built by MSVC/ICL/Clang are slower than GCC-compiled ones.
+In the final version, main loops will be implemented with SSE2/AVX2 intrinsincs and have the same performance, irrespective of compiler.
+For NTT(2^20), we expect speed of 1 GB/s for SSE2 version, and 2 GB/s for AVX2 version.
 
 Reed-Solomon encoding (2^19 source blocks => 2^19 ECC blocks, 2052 bytes each) in GF(0xFFF00001):
 ```
-rs64g-avx2:   2163 ms = 949 MiB/s,  cpu 15132 ms = 700%,  os 0 ms
-rs64g-sse42:  2617 ms = 784 MiB/s,  cpu 18736 ms = 716%,  os 31 ms
-rs64g:        3430 ms = 598 MiB/s,  cpu 25428 ms = 741%,  os 31 ms
-rs64m:        3689 ms = 556 MiB/s,  cpu 27503 ms = 746%,  os 733 ms
+rs64g-avx2:  2154 ms = 952 MiB/s,  cpu 15538 ms = 721%,  os 62 ms
+rs64g-sse2:  2641 ms = 777 MiB/s,  cpu 18346 ms = 695%,  os 31 ms
+rs64g:       3462 ms = 593 MiB/s,  cpu 24648 ms = 712%,  os 47 ms
+rs64m:       3572 ms = 574 MiB/s,  cpu 27300 ms = 764%,  os 686 ms
 
-rs32g-avx2:   2221 ms = 924 MiB/s,  cpu 16037 ms = 722%,  os 16 ms
-rs32g-sse42:  2944 ms = 697 MiB/s,  cpu 18112 ms = 615%,  os 62 ms
-rs32g:        5095 ms = 403 MiB/s,  cpu 36473 ms = 716%,  os 16 ms
-rs32m:        5805 ms = 354 MiB/s,  cpu 44601 ms = 768%,  os 640 ms
+rs32g-avx2:  2324 ms = 883 MiB/s,  cpu 17098 ms = 736%,  os 16 ms
+rs32g-sse2:  2718 ms = 755 MiB/s,  cpu 19594 ms = 721%,  os 16 ms
+rs32g:       6039 ms = 340 MiB/s,  cpu 44913 ms = 744%,  os 0 ms
+rs32m:       5637 ms = 364 MiB/s,  cpu 43977 ms = 780%,  os 390 ms
 ```
 
 ---
 
 MFA NTT (2^19 blocks of 2052 bytes each) in GF(0xFFF00001):
 ```
-ntt64g-avx2:   949 ms = 1081 MiB/s,  cpu 6224 ms = 656%,  os 0 ms
-ntt64g-sse42:  1184 ms = 867 MiB/s,  cpu 8159 ms = 689%,  os 31 ms
-ntt64g:        1622 ms = 632 MiB/s,  cpu 10873 ms = 670%,  os 0 ms
-ntt64m:        1716 ms = 598 MiB/s,  cpu 12620 ms = 735%,  os 468 ms
+ntt64g-avx2:  931 ms = 1102 MiB/s,  cpu 6536 ms = 702%,  os 31 ms
+ntt64g-sse2:  1158 ms = 886 MiB/s,  cpu 8159 ms = 705%,  os 16 ms
+ntt64g:       1608 ms = 638 MiB/s,  cpu 10811 ms = 673%,  os 0 ms
+ntt64m:       1724 ms = 595 MiB/s,  cpu 12714 ms = 737%,  os 406 ms
 
-ntt32g-avx2:   1002 ms = 1024 MiB/s,  cpu 6755 ms = 674%,  os 0 ms
-ntt32g-sse42:  1228 ms = 836 MiB/s,  cpu 8408 ms = 685%,  os 16 ms
-ntt32g:        2391 ms = 429 MiB/s,  cpu 17394 ms = 727%,  os 0 ms
-ntt32m:        2835 ms = 362 MiB/s,  cpu 21403 ms = 755%,  os 203 ms
+ntt32g-avx2:  962 ms = 1067 MiB/s,  cpu 6661 ms = 693%,  os 0 ms
+ntt32g-sse2:  1202 ms = 853 MiB/s,  cpu 8252 ms = 686%,  os 0 ms
+ntt32g:       2473 ms = 415 MiB/s,  cpu 18486 ms = 747%,  os 0 ms
+ntt32m:       3182 ms = 322 MiB/s,  cpu 24523 ms = 771%,  os 312 ms
 ```
 
 ---
@@ -103,15 +103,15 @@ Raw Butterfly operation in GF(0xFFF00001) processing 20 GiB of data.
 NTT(2^N) require about N-1 Butterfly operations per element,
 so ideal NTT(2^19) implementation should be about 18x slower than the raw Butterfly:
 ```
-ntt64g-avx2 b:   Butterfly: 834 ms = 24555 MiB/s,  cpu 5850 ms = 701%,  os 0 ms
-ntt64g-sse42 b:  Butterfly: 1191 ms = 17189 MiB/s,  cpu 8580 ms = 720%,  os 0 ms
-ntt64g b:        Butterfly: 1778 ms = 11520 MiB/s,  cpu 13135 ms = 739%,  os 0 ms
-ntt64m b:        Butterfly: 1064 ms = 9622 MiB/s,  cpu 8143 ms = 765%,  os 140 ms
+ntt64g-avx2 b:  783 ms = 24370 MiB/s,  cpu 5460 ms = 698%,  os 0 ms
+ntt64g-sse2 b:  1096 ms = 17402 MiB/s,  cpu 8611 ms = 786%,  os 0 ms
+ntt64g b:       1745 ms = 10932 MiB/s,  cpu 13775 ms = 790%,  os 0 ms
+ntt64m b:       2080 ms = 9170 MiB/s,  cpu 16115 ms = 775%,  os 156 ms
 
-ntt32g-avx2 b:   Butterfly: 774 ms = 26469 MiB/s,  cpu 6037 ms = 780%,  os 0 ms
-ntt32g-sse42 b:  Butterfly: 1227 ms = 16688 MiB/s,  cpu 8518 ms = 694%,  os 0 ms
-ntt32g b:        Butterfly: 3160 ms = 6481 MiB/s,  cpu 23431 ms = 741%,  os 31 ms
-ntt32m b:        Butterfly: 1454 ms = 7044 MiB/s,  cpu 11279 ms = 776%,  os 94 ms
+ntt32g-avx2 b:  733 ms = 26035 MiB/s,  cpu 5725 ms = 781%,  os 0 ms
+ntt32g-sse2 b:  1109 ms = 17198 MiB/s,  cpu 8408 ms = 758%,  os 0 ms
+ntt32g b:       3054 ms = 6246 MiB/s,  cpu 23291 ms = 763%,  os 0 ms
+ntt32m b:       3131 ms = 6091 MiB/s,  cpu 24477 ms = 782%,  os 94 ms
 ```
 
 ---
