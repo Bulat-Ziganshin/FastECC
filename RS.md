@@ -6,7 +6,10 @@
 
 ### Lacan scheme - encoding in O(N*logN)
 
-In this scheme, we consider N input words as values at N fixed points of some polynomial p(x) with order<N, and compute for ECC data values of p(x) at another M fixed points ("fixed" here means that these points depend only on N and M). It requires intermediate step of computing N polynomial coefficients. We can compute polynomial coefficients from values with IFFT(N) (i.e. order-N Inverse FFT), and then compute polynomial values with FFT(M1) where M1>=max(N,M).
+In this scheme, we consider N input words as values at N fixed points of some polynomial p(x) with order<N,
+and compute for ECC data values of p(x) at another M fixed points ("fixed" here means that these points depend only on N and M).
+It requires intermediate step of computing N polynomial coefficients.
+We can compute polynomial coefficients from values with IFFT(N) (i.e. order-N Inverse FFT), and then compute polynomial values with FFT(M1) where M1>=max(N,M).
 
 But again, since we can compute (multiplicative) FFT in GF(p) only with orders dividing p-1, the actual algorithm is:
 1. Find N1>=N such that N divides p-1
@@ -17,7 +20,8 @@ But again, since we can compute (multiplicative) FFT in GF(p) only with orders d
 6. Perform order-M1 FFT
 7. Output some M values from FFT result as ECC data
 
-In order to allow fast decoding, the M1 points employed in the second FFT should inlcude the N1 points from the first IFFT, that requires M1=k*N1. So, we need to correct fourth step of the algorithm:
+In order to allow fast decoding, the M1 points employed in the second FFT should inlcude the N1 points from the first IFFT, that requires M1=k*N1.
+So, we need to correct fourth step of the algorithm:
 
 4. Find M1>=N1+M such that M1=k*N1 and M1 divides p-1. This means that M1 points will include N1 points from the first IFFT and at least M other points.
 
@@ -36,7 +40,9 @@ So, we have to solve classical "polynomial interpolation" problem - restore p(x)
 ```
 p(x[j]) = y[j], j=1..N
 ```
-Googling by "fast polynomial interpolation", we can find that it can be solved in generic way in O(N*log(N)^2) time. But we can do it faster by mentioning that those N remaining points is a subset of N+M points that can be used for FFT/iFFT evaluation. This allows us to build even more efficient algorithm:
+Googling by "fast polynomial interpolation", we can find that it can be solved in generic way in O(N*log(N)^2) time.
+But we can do it faster by mentioning that those N remaining points is a subset of N+M points that can be used for FFT/iFFT evaluation.
+This allows us to build even more efficient algorithm:
 
 1. Compute special polynomial g(x) of order==M
 2. Multiply them: h(x) = p(x)*g(x)
@@ -57,6 +63,8 @@ And the h(x) = p(x)*g(x) product has the following values:
 h(x[1..N],z[1..M]) = (y[1]*g[1], ... y[N]*g[N], 0,0..0)
 ```
 
-As you see, we know h(x) values at N+M points. We also know that it has order<N+M, because g(x) has order M and p(x) has order<N. So, now we can use FFT of order N+M to convert values at those N+M points into coefficients of h(x) polynomial.
+As you see, we know h(x) values at N+M points. We also know that it has order<N+M, because g(x) has order M and p(x) has order<N.
+So, now we can use FFT of order N+M to convert values at those N+M points into coefficients of h(x) polynomial.
 
-Once we have computed h(x), we can employ usual "polynomial division" algorithm to compute p(x) = h(x) / g(x) in the O(N*logN) time. As result, we will get all coefficients of p(x) and then call FFT again to compute p(x) values corresponding to the source data
+Once we have computed h(x), we can employ usual "polynomial division" algorithm to compute p(x) = h(x) / g(x) in the O(N*logN) time.
+As result, we will get all coefficients of p(x) and then call FFT again to compute p(x) values corresponding to the source data

@@ -61,6 +61,8 @@ NTT(2^N) require N passes over data, so its speed will be 10/N or 20/N GB/s per 
 F.e. NTT(2^20) using Mod(2^64-1) operations will run at 1 GB/s per core, 4 GB/s overall!!!
 
 
+<a name="data-packing"/>
+
 ### Efficient data packing
 
 I also found a way to recode 4 KBytes to the 0xFFF00001 base using just 1 extra bit.
