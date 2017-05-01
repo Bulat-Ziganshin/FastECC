@@ -16,7 +16,7 @@ The remainder of the first option is interpreted as following:
 - m: test GF(p) implementation: check multiplication correctness (this check will also fail for computations modulo 2^n-1 since GF_Normalize isn't called here)
 - r: find primary root of maximum order (P-1 for primary P, 65536 for P=2^32-1)
 - d: check divisors count and density, i.e. average "distance" to the next largest divider of the field order
-- b: benchmark Butterfly operation (i.e. `a+b*K`) on 20 GiB of input data (cosidered as 2.5Gi of (a,b) pairs). This is roughly equivalent to computing NTT(2^21) over 1 GiB of data,
+- b: benchmark Butterfly operation (i.e. `a+b*K`) on 20 GiB of input data (considered as 2.5Gi of (a,b) pairs). This is roughly equivalent to computing NTT(2^21) over 1 GiB of data,
 but without overheads of NTT management - i.e. shows maximum NTT performance possible.
 - s: benchmark slow NTT (i.e. O(N^2) algo)
 - o: benchmark old, recursive radix-2 NTT implementation

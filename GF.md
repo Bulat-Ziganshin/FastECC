@@ -12,8 +12,8 @@ Since GF(2^n) doesn't have useful unity roots, NTT-based Reed-Solomon codes impl
 Instead, we need to use other Galois Field, or even Ring modulo some number. GF(p^n) has a maximal order of p^n-1.
 For rings, the maximal order is defined by complex formula that you can find in chapter `39.7 Composite modulus: the ring Z=mZ` of [FxtBook](http://www.jjj.de/fxt/fxtbook.pdf).
 
-Good candidates for the base have a form p=2^a+b where b is a small positive or negative number.
-Such bases allow efficient data storage and fast radix conversion from/to 2^a base (see below),
+Good candidates for the base have the form p=2^a+b where b is a small positive or negative number.
+Such bases allow efficient data storage and fast radix conversion from/to 2^a base (see [below](#data-packing)),
 while computations become more efficient when b=1 and especially when b=-1.
 
 Good candidates for the base are:
@@ -36,7 +36,7 @@ It may be the best base for x64, but its efficient implementation will require e
 Intermediate data can be stored unnormalized, i.e. as arbitrary 32/64-bit value.
 Normalization required only when operation result may overflow its register size, and it can be partial - only packing the result back to the register size.
 Full normalization is required only on the final data.
-For example, 32-bit code for operations Mod(2^32-1) are as simple as:
+For example, 32-bit code for operations Mod(2^32-1) is as simple as:
 
 ```
 EAX += EBX
