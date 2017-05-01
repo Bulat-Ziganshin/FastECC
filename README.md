@@ -104,8 +104,9 @@ so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations perform
 
 - [NTT: Number-theoretic transform](Overview.md): what one needs to know in order to implement O(N*log(N)) Reed-Solomon error-correcting codes
 - [GF(p).cpp: fast computations in integer rings and fields](GF.md)
-- [NTT.cpp: NTT implementation and benchmarks](NTT.md)
+- [NTT.cpp: NTT implementation](NTT.md)
 - [RS.cpp: Reed-Solomon coder](RS.md)
+- [Benchmarks](Benchmarks.md)
 
 
 <a name="links"/>
