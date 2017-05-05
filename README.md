@@ -1,4 +1,4 @@
-FastECC provides `O(N*log(N))` [Reed-Solomon coder], running at 1 GB/s on i7-4770 with 2^20 blocks.
+FastECC provides `O(N*log(N))` [Reed-Solomon coder], running at 1.2 GB/s on i7-4770 with 2^20 blocks.
 Version 0.1 implements only encoding, so it isn't yet ready for real use.
 
 
@@ -19,7 +19,7 @@ Note that all speeds mentioned here are measured on i7-4770, employing all featu
 including multi-threading, SIMD and x64 support.
 
 FastECC is open-source library implementing `O(N*log(N))` encoding algorithm.
-Depending on SIMD extension used, it's 7-10 times faster than RSC32, computing million ECC blocks at 700-1000 MB/s.
+It computes million ECC blocks at 1.2 GB/s.
 Future versions will implement decoding that's also `O(N*log(N))`, although 1.5-3 times slower than encoding.
 Current implementation is limited to 2^20 blocks, removing this limit is the main priority for future work
 aside of decoder implementation.
@@ -87,15 +87,32 @@ and evaluate it at e[i]: `p'(e[i]) = f'(e[i])*l(e[i]) + f(e[i])*l'(e[i]) = f(e[i
 Moreover, l'(e[i])!=0, so we can recover all the lost f(e[i]) values by simple division: `f(e[i]) = p'(e[i]) / l'(e[i])`!!!
 
 So, the entire algorithm is:
-- transform polynomials p and l into the coefficient space
+- transform polynomials p and l into coefficient space
 - compute their derivatives p' and l'
-- transform p' and l' into the value space
+- transform p' and l' into value space
 - evaluate each `f(e[i]) = p'(e[i]) / l'(e[i])`
 
 When M<=N, first operation on p is iNTT(2N),
 third operation on p' is NTT(N) since we need to compute p'(x) values only at N points corresponding to original data,
 and rest is either O(N) or operations on l(x) that is performed only once,
 so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations performed on encoding.
+
+
+<a name="roadmap"/>
+
+## Roadmap
+
+- [x] Encoder (version 0.1)
+- [ ] Decoder (version 0.2)
+- [ ] GF(p) <-> binary conversion
+      - int encode(size,srcdata,outdata), decode(size,srcdata,int,outdata)
+- [ ] Convenient plain C API and FastECC.dll
+      - CreateEncoderContext/CreateDecoderContext(SrcBlocks,EccBlocks,BlockSize)
+      - AllocMemory(ctx), GetMemorySize(ctx), SetMemoryBuffer(ctx,buf), GetMemoryBuffer(ctx)
+      - Encode(ctx,srcdata,eccdata)
+      - Decode(ctx,alive_data,alive_indexes,wanted_data,wanted_indexes)
+- [ ] SSE2/AVX2-intrinsics with runtime selection of scalar/sse2/avx2 code path
+- [ ] NTT of sizes!=2^n
 
 
 <a name="more"/>

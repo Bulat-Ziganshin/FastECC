@@ -1,6 +1,6 @@
 
 All tests are performed on i7-4770 with 2-channel DDR3-1600 memory, employing all CPU cores.
-Speeds are measured in MiB/s (mebibytes/second), which is 5% higher than MB/s (megabytes/second).
+Speeds are measured in MiB/s (mebibytes/second), add 5% to convert into MB/s (megabytes/second).
 
 Executables are compiled by (-DSIMD selects vectorizable code path):
 - `*64g-avx2`: 64-bit GCC 6.3 with -DSIMD=AVX2 -mavx2
