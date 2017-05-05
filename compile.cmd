@@ -1,9 +1,10 @@
 @echo off
 set name=ntt
 set main=main.cpp
-::set name=rs
-::set main=rs.cpp
-set options_ms=-MP -Gy -GR- -nologo -Fo%TEMP%\ -Fp%TEMP%\ %main% user32.lib shell32.lib ole32.lib advapi32.lib %* -link -LARGEADDRESSAWARE
+if "%1"=="rs" set name=rs
+if "%1"=="rs" set main=rs.cpp
+if "%1"=="rs" shift
+set options_ms=-MP -Gy -GR- -nologo -Fo%TEMP%\ -Fp%TEMP%\ %main% user32.lib shell32.lib ole32.lib advapi32.lib %1 %2 %3 %4 %5 %6 %7 %8 %9 -link -LARGEADDRESSAWARE
 set options_ms=-GL %options_ms%
 set options_ms_cl=-O2 -EHsc %options_ms%
 set options_ms_x86=-MACHINE:x86 -SUBSYSTEM:CONSOLE,5.01
