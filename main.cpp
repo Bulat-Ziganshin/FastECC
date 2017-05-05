@@ -310,7 +310,7 @@ void Code (int argc, char **argv, const char* P_str)
 //   '+': switch to P=2^64-1 (not a primary number!)
 int main (int argc, char **argv)
 {
-    InitLargePages();
+    // InitLargePages();
     if (argc>=2 && argv[1][0]=='.') {
         argv[1]++;
         verbose = false;
