@@ -397,14 +397,6 @@ void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
         root = GF_Mul<T,P> (root, root);
     }
 
-    // Fill root_arr[i] with roots[0] ** i, where roots[0] ** N == 1
-    T root_r = roots[0],  root_arr[1024];
-    assert(1024 >= R);  // root_arr[] is too small
-    for (size_t r=1; r<R; r++) {
-        root_arr[r] = root_r;
-        root_r = GF_Mul<T,P> (root_r, roots[0]);    // next root of power N
-    }
-
     // MFA is impossible or will be inefficient
     if (N < 4  ||  N*SIZE*sizeof(T) < L2Cache)
     {
@@ -418,22 +410,23 @@ void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
         // 1. Apply a (length R) FFT on each column
         TransposeMatrix (data, R, C);
         #pragma omp for
-        for (ptrdiff_t i=0; i<N; i+=R)
-            IterativeNTT<T,P> (data+i, R, SIZE, root_ptr);
-        TransposeMatrix (data, C, R);
+        for (ptrdiff_t c=0; c<C; c++) {
+            IterativeNTT<T,P> (data+c*R, R, SIZE, root_ptr);
 
         // 2. Multiply each matrix element (index r,c) by roots[0] ** (r*c)
-        #pragma omp for
-        for (int r=1; r<R; r++) {
-            T root_c = root_arr[r];                             // roots[0] ** r
-            for (size_t c=1; c<C; c++) {
-                T* __restrict__ block = data[r*C+c];
-                for (size_t k=0; k<SIZE; k++) {                 // cycle over SIZE elements of the single block
-                    block[k] = GF_Mul<T,P> (block[k], root_c);
+            if (c) {
+                T root_c = GF_Pow<T,P> (roots[0], c);
+                T root_rc = root_c;                             // roots[0] ** r
+                for (int r=1; r<R; r++) {
+                    T* __restrict__ block = data[r+c*R];
+                    for (size_t k=0; k<SIZE; k++) {             // cycle over SIZE elements of the single block
+                        block[k] = GF_Mul<T,P> (block[k], root_rc);
+                    }
+                    root_rc = GF_Mul<T,P> (root_rc, root_c);     // roots[0] ** r*c for the next c
                 }
-                root_c = GF_Mul<T,P> (root_c, root_arr[r]);     // roots[0] ** r*c for the next c
             }
         }
+        TransposeMatrix (data, C, R);
 
         // 3. Apply a (length C) FFT on each row
         #pragma omp for
