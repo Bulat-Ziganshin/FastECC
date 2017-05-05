@@ -47,15 +47,14 @@ void EncodeReedSolomon (size_t N, size_t SIZE)
         // This is accomplished by the following steps:
 
         // 2. Multiply the polynomial coefficients by root(2*N)**i
-        T root = GF_Root<T,P>(2*N);
-        T root_i = GF_Inv<T,P>(N);                  // root**0 / N (combine division by N with multiplication by powers of the root)
+        T root_2N = GF_Root<T,P>(2*N),  inv_N = GF_Inv<T,P>(N);
         #pragma omp parallel for
         for (ptrdiff_t i=0; i<N; i++) {
+            T root_i = GF_Mul<T,P> (inv_N, GF_Pow<T,P>(root_2N,i));    // root_2N**i / N (combine division by N with multiplication by powers of the root)
             T* __restrict__ block = data[i];
             for (size_t k=0; k<SIZE; k++) {         // cycle over SIZE elements of the single block
                 block[k] = GF_Mul<T,P> (block[k], root_i);
             }
-            root_i = GF_Mul<T,P> (root_i, root);    // root**i / N for the next i
         }
 
         // 3. NTT: polynomial evaluation. This evaluates the modified polynomial at root(N)**i points,
