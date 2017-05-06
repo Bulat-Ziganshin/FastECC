@@ -104,7 +104,7 @@ so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations perform
 
 - [x] Encoder (version 0.1)
 - [ ] Decoder (version 0.2)
-- [ ] [Public API](https://github.com/Bulat-Ziganshin/FastECC/issues/1)
+- [ ] Public API (see issue #1)
 - [ ] SSE2/AVX2-intrinsics with runtime selection of scalar/sse2/avx2 code path
 - [ ] NTT of sizes!=2^n
 
@@ -119,8 +119,6 @@ so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations perform
 - [RS.cpp: Reed-Solomon coder](RS.md)
 - [Benchmarks](Benchmarks.md)
 
-
-<a name="links"/>
 
 [Reed-Solomon coder]: https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction
 [MultiPar2]: https://www.livebusinesschat.com/smf/index.php?board=396.0
