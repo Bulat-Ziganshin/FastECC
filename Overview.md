@@ -1,4 +1,4 @@
-What one need to know in order to implement N*logN Reed-Solomon error-correction codes
+What one needs to know in order to implement O(N*log(N)) Reed-Solomon error-correcting codes
 
 
 # NTT implementation
@@ -9,8 +9,10 @@ Prerequsites:
 
 Topics:
 * [Discrete Fourier transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform)
-* [Fast Fourier transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) and in particular [Cooley–Tukey FFT algorithm](https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm) as N*logN algorithm implementing DFT
-* [Number-theoretic transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform_(general)) as modified FFT employing the same add/sub/mul operations and roots of 1, but in Galois field
+* [Fast Fourier transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) and in particular 
+[Cooleyâ€“Tukey FFT algorithm](https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm) as O(N*log(N)) algorithm implementing DFT
+* [Number-theoretic transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform_(general)) as modified FFT 
+employing the same add/sub/mul operations and unity roots, but in Galois Field
 
 Once you grasped all these topics, you can grab some FFT implementation and convert it to NTT.
 
@@ -59,12 +61,12 @@ He said that it guarantees invertability of any `n*n` submatrix of `(I,M)`, but 
 
 # NTT for RS encoding and decoding in N*logN time
 
-The first and most obvious idea to perform RS encoding in N*logN time is to compute non-systematic code:
+The first and most obvious idea to perform RS encoding in O(N*logN) time is to compute non-systematic code:
 extend `n` source words with zeroes to `n+k`, NTT them and send `n+k` words produced to the channel. We are done!
 
 This can be written as `C = V(a)*ext(A)` where `ext(A)` is a source vector `A` extended with zeroes to `n+k` elements,
 `C` is encoded vector to be sent to the channel, `V(a)` is Vandermonde `(n+k)*(n+k)` matix produced by powers of `a`,
-i.e. `(1, a, a**2 ... a**(n+k-1)` and `a` is a primitive root of 1 of power `n+k`.
+i.e. `(1, a, a**2 ... a**(n+k-1))` and `a` is a primitive root of 1 of power `n+k`.
 
 Converting this to systematic code means the equation `(A,C) = V(a)*X`, so `A` becomes a part of encoded word
 and we need to compute only remaining `C` part, and `X` is some unknown vector we have to compute.
