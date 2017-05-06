@@ -34,14 +34,14 @@ FastECC employs Number-Theoretic Transform that is just an FFT over integer fiel
 Let's see how it works. Note that below by `length-N polynomial` I mean any polynomial with order < N.
 
 For any given set of N points, only one length-N polynomial may go through all these points.
-Let's consider N input words as y-values of some length-N polynomial at N fixed x-points,
+Let's consider N input words as values of some length-N polynomial at N fixed points,
 only one such polynomial may exist.
 
-Typical Reed-Solomon encoding computes coefficients of this unique polynomial (the so-called [polynomial interpolation]),
+Typical Reed-Solomon encoding computes coefficients of this unique polynomial (so-called [polynomial interpolation]),
 evaluates the polynomial at M another fixed points (the `polynomial evaluation`)
 and outputs these M words as the resulting ECC data.
 
-At the decoding stage, we may receive any subset of N values out of N source words and M computed ECC words.
+At the decoding stage, we may receive any subset of N values out of those N source words and M computed ECC words.
 But since they all belong to the original length-N polynomial, we may recover this polynomial from N known points
 and then compute its values in other points, in particular those N points assigned to original data, thus restoring them.
 
@@ -53,11 +53,11 @@ and then compute its values in other points, in particular those N points assign
 Usually, Reed-Solomon libraries implement encoding by multiplication with [Vandermonde matrix] (O(N^2) algo)
 and decoding by multiplication with the matrix inverse.
 
-But with special choice of fixed x-points we can perform polynomial interpolation and evaluation at these points
+But with special choice of fixed points we can perform polynomial interpolation and evaluation at these points
 in O(N*log(N)) time, using NTT for evaluation and inverse NTT for interpolation. So, the fast encoding is as simple as:
-- consider N input words as y-values of length-N polynomial in the special set of N x-points
+- consider N input words as values of length-N polynomial in the special set of N points
 - compute the polynomial coefficients in O(N*log(N)) time using inverse NTT
-- evaluate the polynomial at another M special x-points in O(M*log(M)) time using NTT
+- evaluate the polynomial at another M special points in O(M*log(M)) time using NTT
 
 Decoding is more involved. We have N words representing values of length-N polynomial at **some** N points.
 Since we can't choose these points, we can't just use iNTT to compute the polynomial coefficients.
@@ -75,7 +75,7 @@ We have `order(p) = order(f)+order(l) < N+M` and l(e[i])=0, so by computing valu
 we can build polynomial p(x) with order<N+M described by its values at N+M points `p(a[i]) = f(a[i])*l(a[i]),  p(e[i]) = f(e[i])*l(e[i]) = 0`,
 i.e. we have fully defined p(x).
 
-Now we just need to perform [polynomial division] f(x)=p(x)/l(x), that is [O(N*log(N)) operation][fast polynomial division].
+Now we just need to perform [polynomial long division] f(x)=p(x)/l(x), that is [O(N*log(N)) operation][fast polynomial division].
 
 
 <a name="fastest"/>
@@ -83,8 +83,8 @@ Now we just need to perform [polynomial division] f(x)=p(x)/l(x), that is [O(N*l
 ## Fastest
 
 But there is even faster algorithm! Let's build derivative `p'(x) = f'(x)*l(x) + f(x)*l'(x)`
-and evaluate it at e[i]: `p'(e[i]) = f'(e[i])*l(e[i]) + f(e[i])*l'(e[i]) = f(e[i])*l'(e[i])` since l(e[i])=0.
-Moreover, l'(e[i])!=0, so we can recover all the lost f(e[i]) values by simple division: `f(e[i]) = p'(e[i]) / l'(e[i])`!!!
+and evaluate it at each e[i]: `p'(e[i]) = f'(e[i])*l(e[i]) + f(e[i])*l'(e[i]) = f(e[i])*l'(e[i])` since l(e[i])=0.
+Moreover, l'(e[i])!=0, so we can recover all the lost f(e[i]) values by simple scalar divisions: `f(e[i]) = p'(e[i]) / l'(e[i])`!!!
 
 So, the entire algorithm is:
 - transform polynomials p and l into coefficient space
@@ -124,7 +124,7 @@ so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations perform
 [MultiPar2]: https://www.livebusinesschat.com/smf/index.php?board=396.0
 [RSC32 by persicum]: https://www.livebusinesschat.com/smf/index.php?board=399.0
 [Vandermonde matrix]: https://en.wikipedia.org/wiki/Vandermonde_matrix
-[polynomial division]: https://en.wikipedia.org/wiki/Polynomial_long_division
-[fast polynomial division]: https://www.google.com/search?q=fast+polynomial+division
+[polynomial long division]: https://en.wikipedia.org/wiki/Polynomial_long_division
+[fast polynomial division]: https://www.google.com/search?q=fast+polynomial+division "fast polynomial division"
 [polynomial interpolation]: https://en.wikipedia.org/wiki/Polynomial_interpolation
-[fast polynomial interpolation]: https://www.google.com/search?q=fast+polynomial+interpolation
+[fast polynomial interpolation]: https://www.google.com/search?q=fast+polynomial+interpolation "fast polynomial interpolation"
