@@ -104,13 +104,7 @@ so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations perform
 
 - [x] Encoder (version 0.1)
 - [ ] Decoder (version 0.2)
-- [ ] GF(p) <-> binary conversion
-      - int encode(size,srcdata,outdata), decode(size,srcdata,int,outdata)
-- [ ] Convenient plain C API and FastECC.dll
-      - CreateEncoderContext/CreateDecoderContext(SrcBlocks,EccBlocks,BlockSize)
-      - AllocMemory(ctx), GetMemorySize(ctx), SetMemoryBuffer(ctx,buf), GetMemoryBuffer(ctx)
-      - Encode(ctx,srcdata,eccdata)
-      - Decode(ctx,alive_data,alive_indexes,wanted_data,wanted_indexes)
+- [ ] [Public API](https://github.com/Bulat-Ziganshin/FastECC/issues/1)
 - [ ] SSE2/AVX2-intrinsics with runtime selection of scalar/sse2/avx2 code path
 - [ ] NTT of sizes!=2^n
 
