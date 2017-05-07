@@ -1,70 +1,78 @@
 
 ### Program usage
 
-`RS [N=19 [SIZE=1024]]` - benchmark NTT-based Reed-Solomon encoding using 2^N input (source) blocks and 2^N output (ECC) blocks, each block SIZE bytes long
+`RS [N=19 [SIZE=2052]]` - benchmark NTT-based Reed-Solomon encoding using 2^N input (source) blocks and 2^N output (ECC) blocks, each block SIZE bytes long
 
 
-### Lacan scheme - encoding in O(N*logN)
+### Lacan scheme: prior art
+
+This scheme was first described in [Systematic MDS Erasure Codes Based on Vandermonde Matrices](http://oatao.univ-toulouse.fr/2176/1/Lacan_2176.pdf)
+and then employed in [RFC 5510: Reed-Solomon Forward Error Correction (FEC) Schemes](https://tools.ietf.org/html/rfc5510).
+
+My contribution is the faster decoding algorithm that is essentially O(N*log(N)) and only 1.5-3 times slower than encoding.
+
+
+### Encoding in O(N*log(N))
 
 In this scheme, we consider N input words as values at N fixed points of some polynomial p(x) with order<N,
 and compute for ECC data values of p(x) at another M fixed points ("fixed" here means that these points depend only on N and M).
 It requires intermediate step of computing N polynomial coefficients.
-We can compute polynomial coefficients from values with IFFT(N) (i.e. order-N Inverse FFT), and then compute polynomial values with FFT(M1) where M1>=max(N,M).
+We can compute polynomial coefficients from values with iNTT(N) (i.e. order-N Inverse NTT), and then compute polynomial values with NTT(M1) where M1>=max(N,M).
 
-But again, since we can compute (multiplicative) FFT in GF(p) only with orders dividing p-1, the actual algorithm is:
+But again, since we can compute (multiplicative) NTT in GF(p) only with orders dividing p-1, the actual algorithm is:
 1. Find N1>=N such that N divides p-1
 2. Extend input vector of size N with zeroes (considered as polynomial values at extra points) to the size N1
-3. Perform order-N1 IFFT
+3. Perform order-N1 iNTT
 4. Find M1>=max(N1,M) such that M1 divides p-1
 5. Extend intermediate vector of size N1 with zeroes (considered as higher polynomial coefficients) to the size M1
-6. Perform order-M1 FFT
-7. Output some M values from FFT result as ECC data
+6. Perform order-M1 NTT
+7. Output some M values from NTT result as ECC data
 
-In order to allow fast decoding, the M1 points employed in the second FFT should inlcude the N1 points from the first IFFT, that requires M1=k*N1.
+In order to allow fast decoding, the M1 points employed in the second NTT should inlcude the N1 points from the first iNTT, that requires M1=k*N1.
 So, we need to correct fourth step of the algorithm:
 
-4. Find M1>=N1+M such that M1=k*N1 and M1 divides p-1. This means that M1 points will include N1 points from the first IFFT and at least M other points.
+4. Find M1>=N1+M such that M1=k*N1 and M1 divides p-1. This means that M1 points will include N1 points from the first iNTT and at least M other points.
 
 
 
 ### [Speeding up RS-encoding (external link)](https://www.livebusinesschat.com/smf/index.php?topic=5952.msg44167#msg44167)
 
 
-### Lacan scheme - decoding in O(N*logN)
+### Decoding in O(N*log(N))
 
-On decoding stage, we have N remaining values out of N+M encoded, and we know that they represent polynomial p(x) with only N coefficients:
+On decoding stage, we have N remaining values out of N+M encoded, and we know that they represent polynomial f(x) with only N coefficients:
 ```
-p(x) = a[0]+...+a[N-1]*x^(N-1))
+f(x) = a[0]+...+a[N-1]*x^(N-1))
 ```
-So, we have to solve classical "polynomial interpolation" problem - restore p(x) from N equations:
+So, we have to solve classic "polynomial interpolation" problem - restore f(x) from N equations:
 ```
-p(x[j]) = y[j], j=1..N
+f(x[i]) = y[i], i=1..N
 ```
 Googling by "fast polynomial interpolation", we can find that it can be solved in generic way in O(N*log(N)^2) time.
-But we can do it faster by mentioning that those N remaining points is a subset of N+M points that can be used for FFT/iFFT evaluation.
+But we can do it faster by mentioning that those N remaining points is a subset of N+M points that can be used for NTT/iNTT evaluation.
 This allows us to build even more efficient algorithm:
 
-1. Compute special polynomial g(x) of order==M
-2. Multiply them: h(x) = p(x)*g(x)
-3. Compute p(x) = h(x) / g(x)
+1. Compute special polynomial l(x) of order==M
+2. Multiply them: p(x) = f(x)*l(x)
+3. Compute f(x) = p(x) / l(x)
 
-On the first sight, it looks meaningless. The catch is that g(x) is so special that p(x)*g(x) product can be fully defined although we know p(x) values only at N points.
+On the first sight, it looks meaningless. The catch is that l(x) is so special that f(x)*l(x) product can be fully defined although we know f(x) values only at N points.
 
-Let's denote points where p(x) values was lost as z[j], j=1..M. So, we have:
+Let's denote points where f(x) values was lost as e[i], i=1..M. So, we have:
 ```
-p(x[1..N],z[1..M]) = (y[1..N], ?[1..M])
+f(x[1..N],e[1..M]) = (y[1..N], ?[1..M])
 ```
-We will use the following polynomial `g(x) = (x-z[1])*....*(x-z[M])`. It will have the following values at the same points:
+We will use the following polynomial `l(x) = (x-e[1])*....*(x-e[M])`. It will have the following values at the same points:
 ```
-g(x[1..N],z[1..M]) = (g[1..N], 0,0..0)
+l(x[1..N],e[1..M]) = (l[1..N], 0,0..0)
 ```
-And the h(x) = p(x)*g(x) product has the following values:
+And the p(x) = f(x)*l(x) product has the following values:
 ```
-h(x[1..N],z[1..M]) = (y[1]*g[1], ... y[N]*g[N], 0,0..0)
+p(x[1..N],e[1..M]) = (y[1]*l[1], ... y[N]*l[N], 0,0..0)
 ```
 
-As you see, we know h(x) values at N+M points. We also know that it has order<N+M, because g(x) has order M and p(x) has order<N.
-So, now we can use FFT of order N+M to convert values at those N+M points into coefficients of h(x) polynomial.
+As you see, we know p(x) values at N+M points. We also know that it has order<N+M, because l(x) has order M and f(x) has order<N.
+So, now we can use NTT of order N+M to convert values at those N+M points into coefficients of p(x) polynomial.
 
-Once we have computed h(x), we can employ usual "polynomial division" algorithm to compute p(x) = h(x) / g(x) in the O(N*logN) time.
-As result, we will get all coefficients of p(x) and then call FFT again to compute p(x) values corresponding to the source data
+Once we have computed p(x), we can employ usual "polynomial division" algorithm to compute f(x) = p(x) / l(x) in the O(N*log(N)) time.
+As result, we will get all coefficients of f(x) and then call NTT again to compute f(x) values corresponding to the source data
