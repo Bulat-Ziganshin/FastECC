@@ -9,9 +9,9 @@ Prerequsites:
 
 Topics:
 * [Discrete Fourier transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform)
-* [Fast Fourier transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) and in particular 
+* [Fast Fourier transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) and in particular
 [Cooley–Tukey FFT algorithm](https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm) as O(N*log(N)) algorithm implementing DFT
-* [Number-theoretic transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform_(general)) as modified FFT 
+* [Number-theoretic transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform_(general)) as modified FFT
 employing the same add/sub/mul operations and unity roots, but in Galois Field
 
 Once you grasped all these topics, you can grab some FFT implementation and convert it to NTT.
@@ -59,9 +59,9 @@ But it seems to be a good compromise between the speed/complexity of computation
 He said that it guarantees invertability of any `n*n` submatrix of `(I,M)`, but i have no idea whether it's true.
 
 
-# NTT for RS encoding and decoding in N*logN time
+# NTT for RS encoding and decoding in O(N*log(N)) time
 
-The first and most obvious idea to perform RS encoding in O(N*logN) time is to compute non-systematic code:
+The first and most obvious idea to perform RS encoding in O(N*log(N)) time is to compute non-systematic code:
 extend `n` source words with zeroes to `n+k`, NTT them and send `n+k` words produced to the channel. We are done!
 
 This can be written as `C = V(a)*ext(A)` where `ext(A)` is a source vector `A` extended with zeroes to `n+k` elements,

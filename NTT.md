@@ -1,7 +1,7 @@
 
 ### Program usage
 
-`NTT [.][=|-|+][i|r|m|d|b|s|o|n] [N=20 [SIZE=512]]` - test/benchmark GF(p) and NTT implementations
+`NTT [.][=|-|+][i|r|m|d|b|s|o|n] [N=19 [SIZE=2052]]` - test/benchmark GF(p) and NTT implementations
 
 First argument is one of chars "irmdbson", optionally prefixed with "." for quiet mode and "=", "-" or "+" for GF(P) choice (character "n" may be omitted). Remaining arguments are used only for options "son".
 
@@ -32,9 +32,9 @@ Checksum mismatch: original 1690540224,  after NTT: 3386487444,  after NTT+iNTT 
 
 ### Performance
 
-Now the best possible performance of Reed-Solomon encoding is 1 GB/s on i7-4770 using AVX2 and all cores.
+Now the best possible performance of Reed-Solomon encoding is 1.2 GB/s on i7-4770 using AVX2 and all cores.
 It can be reached with 2^19 source blocks and 2^19 ECC blocks, each 2 KiB large,
-i.e. encoding 1 GiB of source data into 1 GiB of ECC data, that is finished in 2.2 seconds.
+i.e. encoding 1 GiB of source data into 1 GiB of ECC data, that is finished in 1.8 seconds.
 
 With current implementation, maximum performance is reached only when all of the following conditions are met:
 - Block size >= 2 KB. Smaller block sizes means more cache misses, it can be avoided only by careful prefetching.

@@ -43,7 +43,7 @@ and outputs these M words as the resulting ECC data.
 
 At the decoding stage, we may receive any subset of N values out of those N source words and M computed ECC words.
 But since they all belong to the original length-N polynomial, we may recover this polynomial from N known points
-and then compute its values in other points, in particular those N points assigned to original data, thus restoring them.
+and then compute its values at other points, in particular those N points assigned to original data, thus restoring them.
 
 
 <a name="fast"/>
@@ -54,8 +54,8 @@ Usually, Reed-Solomon libraries implement encoding by multiplication with [Vande
 and decoding by multiplication with the matrix inverse.
 
 But with special choice of fixed points we can perform polynomial interpolation and evaluation at these points
-in O(N*log(N)) time, using NTT for evaluation and inverse NTT for interpolation. So, the fast encoding is as simple as:
-- consider N input words as values of length-N polynomial in the special set of N points
+in O(N*log(N)) time, using NTT for evaluation and inverse NTT for interpolation. So, [the fast encoding] is as simple as:
+- consider N input words as values of length-N polynomial at N special points
 - compute the polynomial coefficients in O(N*log(N)) time using inverse NTT
 - evaluate the polynomial at another M special points in O(M*log(M)) time using NTT
 
@@ -95,7 +95,7 @@ So, the entire algorithm is:
 When M<=N, first operation on p is iNTT(2N),
 third operation on p' is NTT(N) since we need to compute p'(x) values only at N points corresponding to original data,
 and rest is either O(N) or operations on l(x) that is performed only once,
-so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations performed on encoding.
+so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations required for encoding.
 
 
 <a name="roadmap"/>
@@ -114,7 +114,7 @@ so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations perform
 ## More
 
 - [NTT: Number-theoretic transform](Overview.md): what one needs to know in order to implement O(N*log(N)) Reed-Solomon error-correcting codes
-- [GF(p).cpp: fast computations in integer rings and fields](GF.md)
+- [GF(p).cpp: fast computations in finite fields and rings](GF.md)
 - [NTT.cpp: NTT implementation](NTT.md)
 - [RS.cpp: Reed-Solomon coder](RS.md)
 - [Benchmarks](Benchmarks.md)
@@ -124,6 +124,7 @@ so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations perform
 [MultiPar2]: https://www.livebusinesschat.com/smf/index.php?board=396.0
 [RSC32 by persicum]: https://www.livebusinesschat.com/smf/index.php?board=399.0
 [Vandermonde matrix]: https://en.wikipedia.org/wiki/Vandermonde_matrix
+[the fast encoding]: https://github.com/Bulat-Ziganshin/FastECC/blob/bed3a3f4c228ee7ab61cee1b7c28b6d4d76df02d/RS.cpp#L37
 [polynomial long division]: https://en.wikipedia.org/wiki/Polynomial_long_division
 [fast polynomial division]: https://www.google.com/search?q=fast+polynomial+division "fast polynomial division"
 [polynomial interpolation]: https://en.wikipedia.org/wiki/Polynomial_interpolation

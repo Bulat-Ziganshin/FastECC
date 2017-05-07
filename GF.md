@@ -8,7 +8,7 @@ This program is useful for researching ring properties, in particular maximal or
 
 ### Lucky number: choosing the best base for computations
 
-Since GF(2^n) doesn't have useful unity roots, NTT-based Reed-Solomon codes implementation can't perform computations in this field.
+Since GF(2^n) doesn't have much roots of unity, NTT-based Reed-Solomon codes implementation can't perform computations in this field.
 Instead, we need to use other Galois Field, or even Ring modulo some number. GF(p^n) has a maximal order of p^n-1.
 For rings, the maximal order is defined by complex formula that you can find in chapter `39.7 Composite modulus: the ring Z=mZ` of [FxtBook](http://www.jjj.de/fxt/fxtbook.pdf).
 
