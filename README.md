@@ -119,6 +119,11 @@ so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations require
 - [RS.cpp: Reed-Solomon coder](RS.md)
 - [Benchmarks](Benchmarks.md)
 
+Discussions:
+- [Encode.ru forum](https://encode.ru/threads/2750-FastECC-fastest-Reed-Solomon-codec-ever?p=52622)
+- [MultiPar forum](https://www.livebusinesschat.com/smf/index.php?topic=6154.0)
+- [Hacker News story](https://news.ycombinator.com/item?id=14290617)
+
 
 [Reed-Solomon coder]: https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction
 [MultiPar2]: https://www.livebusinesschat.com/smf/index.php?board=396.0
