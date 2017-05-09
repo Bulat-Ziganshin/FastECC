@@ -407,7 +407,7 @@ void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
 
     #pragma omp parallel
     {
-        // 1. Apply a (length R) FFT on each column
+        // 1. Apply a (length R) NTT on each column
         TransposeMatrix (data, R, C);
         #pragma omp for
         for (ptrdiff_t c=0; c<C; c++) {
@@ -422,13 +422,13 @@ void MFA_NTT (T** data, size_t N, size_t SIZE, bool InvNTT)
                     for (size_t k=0; k<SIZE; k++) {             // cycle over SIZE elements of the single block
                         block[k] = GF_Mul<T,P> (block[k], root_rc);
                     }
-                    root_rc = GF_Mul<T,P> (root_rc, root_c);     // roots[0] ** r*c for the next c
+                    root_rc = GF_Mul<T,P> (root_rc, root_c);    // roots[0] ** r*c for the next c
                 }
             }
         }
         TransposeMatrix (data, C, R);
 
-        // 3. Apply a (length C) FFT on each row
+        // 3. Apply a (length C) NTT on each row
         #pragma omp for
         for (ptrdiff_t i=0; i<N; i+=C) {
             if (R >= C)  // R rows * C columns

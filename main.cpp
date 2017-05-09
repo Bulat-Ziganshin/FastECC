@@ -211,6 +211,29 @@ uint32_t hash (T** data, size_t N, size_t SIZE)
 }
 
 
+// Benchmark small NTT
+template <typename T, T P>
+void BenchSmallNTT (size_t REPEAT, size_t N, size_t SIZE, const char* P_str)
+{
+    T *data0 = new T [N*SIZE];
+    for (size_t i=0; i<N*SIZE; i++)
+        data0[i] = i%P;
+
+    T **data = new T* [N];      // pointers to blocks
+    for (size_t i=0; i<N; i++)
+        data[i] = data0 + i*SIZE;
+
+    char title[999];
+    for (int i=64; i--; )
+        if (T(1)<<i == N)
+            sprintf (title, "%s<2^%d,%.0lf,P=%s>*%.0lf", "MFA_NTT", i, SIZE*1.0*sizeof(T), P_str, 1.0*REPEAT);
+
+    double processed_size = (P==0x10001? 0.5:1.0) * N*SIZE*sizeof(T);   // In my GF(0x10001) implementation 4-byte value represents only 2 bytes of real data
+
+    time_it (processed_size*REPEAT, title, [&]{for(int i=0; i<REPEAT; i++) MFA_NTT <T,P> (data, N, SIZE, false);});
+}
+
+
 // Benchmark and verify two NTT implementations: Rec_NTT() & MFA_NTT(), compare results to definitive Slow_NTT()
 template <typename T, T P>
 void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE, const char* P_str)
@@ -231,7 +254,7 @@ void BenchNTT (bool RunOld, bool RunCanonical, size_t N, size_t SIZE, const char
 
     uint32_t hash0 = hash(data, N, SIZE);    // hash of original data
 
-    char title[99];
+    char title[999];
     int divider = RunOld? N : RunNTT9? 9 : RunNTT6? 6 : RunNTT3? 3 : N;
     sprintf (title, "NTT%d<%d*%.0lf,%.0lf,P=%s>", divider, divider, N*1.0/divider, SIZE*1.0*sizeof(T), P_str);
     for (int i=64; i--; )
@@ -294,12 +317,14 @@ void Code (int argc, char **argv, const char* P_str)
     size_t N = 1<<19;   // NTT order
     size_t SIZE = 2052; // Block size, in bytes
                         // 1 GB total
+    if (opt=='l')  N = 32;
 
     if (argc>=3)  N = 1<<atoi(argv[2]);
     if (argc>=4)  SIZE = atoi(argv[3]);
 
     assert(N<P);  // Too long NTT for the such small P
-    BenchNTT<T,P> (opt=='o', opt=='s', N, SIZE/sizeof(T), P_str);
+    if (opt=='l')  BenchSmallNTT<T,P> ((1<<20) / N, N, SIZE/sizeof(T), P_str);
+    else BenchNTT<T,P> (opt=='o', opt=='s', N, SIZE/sizeof(T), P_str);
 }
 
 
