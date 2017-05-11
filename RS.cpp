@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <stdint.h>
+#include <cstddef>
 #include <string.h>
 #include <math.h>
 #include <cassert>

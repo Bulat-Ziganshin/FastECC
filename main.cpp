@@ -1,6 +1,7 @@
 /// Benchmarks and tests of GF(p) and NTT implementations
 #include <iostream>
 #include <algorithm>
+#include <cstddef>
 #include <stdint.h>
 #include <string.h>
 #include <math.h>

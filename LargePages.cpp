@@ -79,13 +79,13 @@ T* VAlloc (uint64_t size)
 {
     if (verbose)  printf("Allocated %.0lf MiB\n", (size*sizeof(T))/1048576.0);
     return (T*) malloc(size*sizeof(T));
-}    
+}
 
 template< class T >
 void VFree( T* p )
 {
-    free(p)
+    free(p);
 }
 
 #endif // _WIN32
-    
+

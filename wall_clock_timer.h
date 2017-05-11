@@ -19,6 +19,7 @@
 #include <windows.h>
 #else
 #include <sys/time.h>
+#include <sys/resource.h>
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
@@ -64,10 +65,17 @@ double GetTimer()
 // Returns number of seconds spent in the current process
 void GetProcessKernelUserTimes (double *KernelTime, double *UserTime)
 {
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     FILETIME kt, ut, x, y;
     int ok = GetProcessTimes(GetCurrentProcess(),&x,&y,&kt,&ut);
     *KernelTime = !ok? -1 : ((((unsigned long long)(kt.dwHighDateTime) << 32) + kt.dwLowDateTime)) / 1e7;
     *UserTime   = !ok? -1 : ((((unsigned long long)(ut.dwHighDateTime) << 32) + ut.dwLowDateTime)) / 1e7;
+#else
+    struct rusage usage;
+    int res = getrusage (RUSAGE_SELF, &usage);
+    *KernelTime = res? -1 : (usage.ru_stime.tv_sec + usage.ru_stime.tv_usec/1e6);
+    *UserTime   = res? -1 : (usage.ru_utime.tv_sec + usage.ru_utime.tv_usec/1e6);
+#endif
 }
 #endif // TIMER_H
 
