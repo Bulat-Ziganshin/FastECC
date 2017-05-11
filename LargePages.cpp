@@ -1,3 +1,7 @@
+// Alocation memory in Large Pages (2/4 MB), that may improve speed when accessing gigabytes of data in random order
+
+#ifdef _WIN32
+
 #include <windows.h>
 
 const DWORD    g_PageFlag0 = 0x1000;
@@ -62,3 +66,26 @@ void VFree( T* p )
 {
     VirtualFree(p, 0, MEM_RELEASE);
 }
+
+
+#else // _WIN32
+
+bool verbose = true;
+
+void InitLargePages() {}
+
+template< class T >
+T* VAlloc (uint64_t size)
+{
+    if (verbose)  printf("Allocated %.0lf MiB\n", (size*sizeof(T))/1048576.0);
+    return (T*) malloc(size*sizeof(T));
+}    
+
+template< class T >
+void VFree( T* p )
+{
+    free(p)
+}
+
+#endif // _WIN32
+    
