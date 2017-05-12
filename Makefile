@@ -1,25 +1,39 @@
 CXX=g++
-#add -m32 if trying to build 32 bit binaries on 64 bit machines, will
-#also need gcc-multilib installed
-CFLAGS=-std=c++1y -O3 -s -fopenmp
 
-nttg: nttg-avx2 nttg-sse2 rsg-avx2 rsg-sse2 rsg 
-	$(CXX) $(CFLAGS) -o nttg      main.cpp
+#add -m32 if trying to build 32 bit binaries on 64 bit machines,
+#on Linux will also need gcc-multilib installed
+CXXFLAGS=-std=c++1y -O3 -s -fopenmp
 
-nttg-avx2: 
-	$(CXX) $(CFLAGS) -o nttg-avx2 main.cpp -mavx2 -DSIMD=AVX2 
+#flags to make vectorized SSE2/AVX2 builds
+#(without -DSIMD the sources will use unvectorized code path even on x64)
+SSE2_FLAGS=-msse2 -DSIMD=SSE2
+AVX2_FLAGS=-mavx2 -DSIMD=AVX2
 
-nttg-sse2:
-	$(CXX) $(CFLAGS) -o nttg-sse2 main.cpp -msse2 -DSIMD=SSE2
+SRCFILES=Makefile GF(p).cpp LargePages.cpp ntt.cpp SIMD.h wall_clock_timer.h
+EXEFILES=nttg nttg-sse2 nttg-avx2 rsg rsg-sse2 rsg-avx2 prime
 
-rsg: 
-	$(CXX) $(CFLAGS) -o rsg      RS.cpp
+all: $(EXEFILES)
 
-rsg-avx2: 
-	$(CXX) $(CFLAGS) -o rsg-avx2 RS.cpp -mavx2 -DSIMD=AVX2 
+nttg: main.cpp $(SRCFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $<
 
-rsg-sse2:
-	$(CXX) $(CFLAGS) -o rsg-sse2 RS.cpp -msse2 -DSIMD=SSE2
+nttg-sse2: main.cpp $(SRCFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(SSE2_FLAGS)
+
+nttg-avx2: main.cpp $(SRCFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(AVX2_FLAGS)
+
+rsg: RS.cpp $(SRCFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+rsg-sse2: RS.cpp $(SRCFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(SSE2_FLAGS)
+
+rsg-avx2: RS.cpp $(SRCFILES)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(AVX2_FLAGS)
+
+prime: prime.cpp
+	$(CXX) -O2 -s -o $@ $<
 
 clean:
-	rm -f nttg nttg-avx2 nttg-sse2 rsg rsg-avx2 rsg-sse2
+	rm -f $(EXEFILES)
