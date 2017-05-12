@@ -15,7 +15,7 @@
 #include "wall_clock_timer.h"
 #include "LargePages.cpp"
 #include "GF(p).cpp"
-#include "NTT.cpp"
+#include "ntt.cpp"
 
 
 /***********************************************************************************************************************
