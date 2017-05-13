@@ -66,7 +66,7 @@ ntt32m b:       2835 ms = 6728 MiB/s,  cpu 22433 ms = 791%,  os 78 ms
 
 ### Lucky number?
 
-MFA NTT, recursive NTT and raw Butterfly operations in various GF(P) and rings:
+MFA NTT, recursive NTT and raw Butterfly operations in various GF(p) and rings:
 ```
 ntt64g-avx2 n 16 8192:  MFA_NTT<2^16,8192,P=0xFFF00001>: 374 ms = 1368 MiB/s,  cpu 2168 ms = 579%,  os 0 ms
 ntt64g-avx2 o 16 8192:  Rec_NTT<2^16,8192,P=0xFFF00001>: 848 ms = 604 MiB/s,  cpu 1716 ms = 202%,  os 0 ms
@@ -198,7 +198,7 @@ ntt64m +b:               Butterfly: 529 ms = 36051 MiB/s,  cpu 3604 ms = 681%,  
 Comparison of slow O(N^2) NTT with fast algorithms:
 
 ```
-C:\>timer ntt64g.exe s 20 32
+C:\>timer ntt64g.exe q 20 32
 Slow_NTT<2^20,32,P=0xFFF00001>: 9123729 ms = 0 MiB/s,  cpu 60703889 ms = 665%,  os 51808 ms
 Verified! Original 2679569933,  after NTT: 1187104119
 Kernel Time  =   101.041 = 00:01:41.041 =   0%

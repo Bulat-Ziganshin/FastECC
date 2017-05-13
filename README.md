@@ -1,4 +1,5 @@
-FastECC provides O(N*log(N)) [Reed-Solomon coder], running at 1.2 GB/s on i7-4770 with 2^20 blocks.
+FastECC provides O(N*log(N)) [Reed-Solomon coder], running at 1.2 GB/s on i7-4770 in (2^20, 2^19) config,
+i.e. calculating 524288 parity blocks from 524288 data blocks.
 Version 0.1 implements only encoding, so it isn't yet ready for real use.
 
 
@@ -7,19 +8,19 @@ Version 0.1 implements only encoding, so it isn't yet ready for real use.
 ## What
 
 Almost all existing Reed-Solomon ECC implementations employ matrix multiplication and thus have O(N^2) speed behavior,
-i.e. they can produce N ECC blocks in O(N^2) time, thus spending O(N) time per block.
-F.e. the fastest implementation I know, [MultiPar2], can compute 1000 ECC blocks at the speed ~50MB/s,
-but only at ~2 MB/s in its maximum configuration, 32000 ECC blocks.
-And computations in GF(2^32), implemented in the same way, will build one million ECC blocks at 50 KB/s.
+i.e. they can produce N parity blocks in O(N^2) time, thus spending O(N) time per block.
+F.e. the fastest implementation I know, [MultiPar2], can compute 1000 parity blocks at the speed ~50MB/s,
+but only at ~2 MB/s in its maximum configuration, 32000 parity blocks.
+And computations in GF(2^32), implemented in the same way, will build one million parity blocks at 50 KB/s.
 
-The only exception is closed-source [RSC32 by persicum] with O(N*log(N)) speed, i.e. it spends O(log(N)) time per ECC block.
-Its speed with million ECC blocks is 100 MB/s, i.e. it computes one million of 4 KB ECC blocks
-from one million of source blocks (processing 8 GB overall) in just 80 seconds.
+The only exception is closed-source [RSC32 by persicum] with O(N*log(N)) speed, i.e. it spends O(log(N)) time per parity block.
+Its speed with million parity blocks is 100 MB/s, i.e. it computes one million of 4 KB parity blocks
+from one million of data blocks (processing 8 GB overall) in just 80 seconds.
 Note that all speeds mentioned here are measured on i7-4770, employing all features available in a particular program -
 including multi-threading, SIMD and x64 support.
 
 FastECC is open-source library implementing O(N*log(N)) encoding algorithm.
-It computes million ECC blocks at 1.2 GB/s.
+It computes million parity blocks at 1.2 GB/s.
 Future versions will implement decoding that's also `O(N*log(N))`, although 1.5-3 times slower than encoding.
 Current implementation is limited to 2^20 blocks, removing this limit is the main priority for future work
 aside of decoder implementation.
@@ -39,9 +40,9 @@ only one such polynomial may exist.
 
 Typical Reed-Solomon encoding computes coefficients of this unique polynomial (so-called [polynomial interpolation]),
 evaluates the polynomial at M another fixed points (the `polynomial evaluation`)
-and outputs these M words as the resulting ECC data.
+and outputs these M words as the resulting parity data.
 
-At the decoding stage, we may receive any subset of N values out of those N source words and M computed ECC words.
+At the decoding stage, we may receive any subset of N values out of those N source data words and M computed parity words.
 But since they all belong to the original length-N polynomial, we may recover this polynomial from N known points
 and then compute its values at other points, in particular those N points assigned to original data, thus restoring them.
 

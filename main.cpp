@@ -318,14 +318,14 @@ void Code (int argc, char **argv, const char* P_str)
     size_t N = 1<<19;   // NTT order
     size_t SIZE = 2052; // Block size, in bytes
                         // 1 GB total
-    if (opt=='l')  N = 32;
+    if (opt=='s')  N = 32;
 
     if (argc>=3)  N = 1<<atoi(argv[2]);
     if (argc>=4)  SIZE = atoi(argv[3]);
 
     assert(N<P);  // Too long NTT for the such small P
-    if (opt=='l')  BenchSmallNTT<T,P> ((1<<20) / N, N, SIZE/sizeof(T), P_str);
-    else BenchNTT<T,P> (opt=='o', opt=='s', N, SIZE/sizeof(T), P_str);
+    if (opt=='s')  BenchSmallNTT<T,P> ((1<<20) / N, N, SIZE/sizeof(T), P_str);
+    else BenchNTT<T,P> (opt=='o', opt=='q', N, SIZE/sizeof(T), P_str);
 }
 
 
