@@ -20,18 +20,18 @@ Good candidates for the base are:
 - GF(0xFFF00001) - my current favourite. `0xFFF00000 = 2^20*3*3*5*7*13` has 504 divisors overall, and for random 32-bit N we can find a divisor that is only a few percents larger.
 This means that when we need to process N source blocks, we can perform NTT using only a few percents more memory than the source data occupy. Source blocks up to 4 KB
 can be converted into 1024 numbers in the 0..0xFFF00000 range plus a single bit.
-- GF(0x10001) - computations are 30% faster, but NTT order may be only 2,4..65536.
+- GF(0x10001) - computations may be a bit faster, but NTT order may be only 2,4..65536.
 Compact memory storage require to recode data into base-0x10000 plus one overflow bit per 32K values, that may slowdown the NTT operation.
-- GF(0x10001^2) - slightly faster than GF(0xFFF00001), maximal NTT order is `0x10001^2-1 = 2^17*3*3*11*331`, the same storage problems.
-- Mod(2^32-1) - 2.5x faster, but NTT order may be only 2,4..65536. May be used as fast algorithm for block counts equal to 2^N or slightly lower, for N<=16.
-- GF(2^31-1) - also 2.5x faster, max. order is large, but its divisors `p-1 = 2*3*3*7*11*31*151*331` doesn't look fascinating.
-- GF(p^2) for p=2^31-1 - 2x faster, max order `p^2-1 = 2^32*3*3*7*11*31*151*331` so the divisors are almost as dense as for GF(0xFFF00001).
+- GF(0x10001^2) - may be slightly faster than GF(0xFFF00001), maximal NTT order is `0x10001^2-1 = 2^17*3*3*11*331`, the same storage problems.
+- Mod(2^32-1) - 2x faster, but NTT order may be only 2,4..65536. May be used as fast algorithm for block counts equal to 2^N or slightly lower, for N<=16.
+- GF(2^31-1) - also 2x faster, max. order is large, but its divisors `p-1 = 2*3*3*7*11*31*151*331` doesn't look fascinating.
+- GF(p^2) for p=2^31-1 - again 2x faster, max order `p^2-1 = 2^32*3*3*7*11*31*151*331` so the divisors are almost as dense as for GF(0xFFF00001).
 It may be the best base, but its efficient implementation will require extra work.
 - GF(2^61-1) - fastest for pure (non-SIMD) x64 code, but `p-1 = 2*3*3*5*5*7*11*13*31*41*61*151*331*1321` has not too much divisors
 - GF(p^2) for p=2^61-1 may be also interesting since it's almost as fast as GF(2^61-1) and `p^2-1 = 2^62*3*3*5*5*7*11*13*31*41*61*151*331*1321`,
 providing ideal coverage of integer space by divisors. I think that it may be 3-4x faster than GF(0xFFF00001).
 It may be the best base for x64, but its efficient implementation will require extra work.
-- Mod(2^64-1) - among fastest variants for x64, but NTT order should be a divisor of `2^16*3*5*17449`, so it doesn't provide much choice.
+- Mod(2^64-1) - among fastest variants for x64, but NTT order should be a divisor of `2^16*3*5*17449`, so it doesn't provide too much choice.
 
 Intermediate data can be stored unnormalized, i.e. as arbitrary 32/64-bit value.
 Normalization required only when operation result may overflow its register size, and it can be partial - only packing the result back to the register size.
@@ -59,6 +59,12 @@ The entire Butterfly computation consists of these three operations, so (on Skyl
 One Butterfly operation processes 8 bytes for Mod(2^32-1) or 16 bytes for Mod(2^64-1), so it will process 10/20 GB/s per core.
 NTT(2^N) require N passes over data, so its speed will be 10/N or 20/N GB/s per core.
 F.e. NTT(2^20) using Mod(2^64-1) operations will run at 1 GB/s per core, 4 GB/s overall!!!
+
+Unfortunately, it seems that while we can perform NTT/iNTT and thus RS encoding in arbitrary rings at O(N*log(N)) speed,
+RS decoding require full division support and therefore can be implemented only in Galois Fields.
+
+Great overview of GF(p) Butterfly optimizations was provided by David Harvey in the talk
+[Faster arithmetic for number-theoretic transforms](http://web.maths.unsw.edu.au/~davidharvey/talks/fastntt-2-talk.pdf).
 
 
 <a name="data-packing"/>
