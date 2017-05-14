@@ -1,4 +1,4 @@
-FastECC provides O(N*log(N)) [Reed-Solomon coder], running at 1.2 GB/s on i7-4770 in (2^20, 2^19) config,
+FastECC implements O(N*log(N)) [Reed-Solomon coder], running at 1.2 GB/s on i7-4770 in (2^20, 2^19) config,
 i.e. calculating 524288 parity blocks from 524288 data blocks.
 Version 0.1 implements only encoding, so it isn't yet ready for real use.
 
@@ -99,6 +99,50 @@ and rest is either O(N) or operations on l(x) that is performed only once,
 so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations required for encoding.
 
 
+<a name="why-not"/>
+
+## Why not
+
+FastECC is absolutely useless for RAID storage (such as hadoop). With RAID, when one sector is overwritten,
+RAID software should read all other data sectors in the same shard in order to recompute parity sectors of the shard,
+and then overwrite all these parity sectors. So, RAID software developers are looking for solutions that will allow them
+to read/write less sectors on each operation (such as [pyramid codes](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/Pyramid-Codes.pdf)),
+rather than opposite.
+
+FastECC is probably useless for any hardware controllers (SSD, Ethernet, LTE, DVB...).
+These controllers work with analog signals and tend to use **soft** decoders to extract as much data as possible
+(soft decoders understand that data received as 7 have more chances to be decoded as 8 rather than to be decoded as 2,
+and can deal even with something like 7.4 which is more probably 8 rather than 6). Soft decoders are absolutely out of my Math skills,
+so if someone will build soft decoder, it will be not FastECC, but other great lib (and most probably not free).
+
+There are some applications still. PAR3 is one of them - it's still interesting for some people, although not many.
+Various communication applications and P2P data storage are also frequently mentioned in [discussions](#discussion).
+
+---
+
+I made a quick speed comparison and found that FastECC is faster than 16-bit RS codec in MultiPar starting from ~32 parity blocks.
+8-bit RS codecs such as ISA-L should be even faster than 16-bit ones. And with 20% redundancy 32 parity blocks means 160 data blocks,
+close to the maximum possible for 8-bit RS. So, it seems that FastECC territory starts right where 8-bit codecs territory ends -
+if you need more than 256 data+parity blocks, FastECC should be faster than any 16-bit RS coders, otherwise 8-bit [ISA-L] or [CM256] is preferable.
+
+Moreover, FastECC is free from patent restrictions that has any **fast** 16-bit RS codec using PSHUFB (i.e. SSSE3).
+And slow codecs are several times slower than MultiPar, so they have even less chances.
+
+There is a great alternative to FastECC - [catid wirehair](https://github.com/catid/wirehair) library, but afair it also may be covered with patents.
+It's [already as fast](https://github.com/catid/wirehair#benchmarks) as [FastECC](Benchmarks.md#reed-solomon-encoding),
+but can be made [several times faster using SSE1](https://github.com/catid/wirehair/issues/2).
+It's limited to 64000 source blocks, but amount of parity blocks can be arbitrary.
+It's an LDPC codec, so not [MDS](https://en.wikipedia.org/wiki/Singleton_bound#MDS_codes),
+but chances that it needs even single extra block to recover is [as low as 0.1%](https://github.com/catid/wirehair#discussion-overhead-reductions-with-gf216).
+
+Unlike Wirehair and MultiPar, FastECC doesn't work directly with arbitrary binary data - it works in GF(p) or GF(p^2), default is GF(0xFFF00001).
+This means that input data [should be converted](GF.md#efficient-data-packing) into 0..0xFFF00000 range,
+that further means that parity sectors are slightly longer that input ones (f.e. 4096 byte data sectors and 4100 byte parity sectors).
+This also limits its applications.
+
+So, overall, FastECC should replace any use of 16-bit RS codecs, while LDPC and 8-bit RS codecs will keep their niches.
+
+
 <a name="roadmap"/>
 
 ## Roadmap
@@ -112,7 +156,7 @@ so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations require
 
 <a name="more"/>
 
-## More
+## If you want to know more
 
 - [NTT: Number-theoretic transform](Overview.md): what one needs to know in order to implement O(N*log(N)) Reed-Solomon error-correcting codes
 - [GF(p).cpp: fast computations in finite fields and rings](GF.md)
@@ -120,7 +164,11 @@ so overall decoding is 1.5-3 times slower than iNTT(N)+NTT(M) operations require
 - [RS.cpp: Reed-Solomon coder](RS.md)
 - [Benchmarks](Benchmarks.md)
 
-Discussions:
+
+<a name="discussion"/>
+
+## Discussion
+
 - [Encode.ru forum](https://encode.ru/threads/2750-FastECC-fastest-Reed-Solomon-codec-ever?p=52622)
 - [MultiPar forum](https://www.livebusinesschat.com/smf/index.php?topic=6154.0)
 - [Hacker News story](https://news.ycombinator.com/item?id=14290617)
@@ -135,3 +183,5 @@ Discussions:
 [fast polynomial division]: https://www.google.com/search?q=fast+polynomial+division "fast polynomial division"
 [polynomial interpolation]: https://en.wikipedia.org/wiki/Polynomial_interpolation
 [fast polynomial interpolation]: https://www.google.com/search?q=fast+polynomial+interpolation "fast polynomial interpolation"
+[ISA-L]: https://github.com/01org/isa-l
+[CM256]: https://github.com/catid/cm256
