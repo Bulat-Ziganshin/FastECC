@@ -9,7 +9,8 @@
 This scheme was first described in [Systematic MDS Erasure Codes Based on Vandermonde Matrices](http://oatao.univ-toulouse.fr/2176/1/Lacan_2176.pdf)
 and then employed in [RFC 5510: Reed-Solomon Forward Error Correction (FEC) Schemes](https://tools.ietf.org/html/rfc5510).
 
-My contribution is the faster decoding algorithm that is essentially O(N*log(N)) and only 1.5-3 times slower than encoding.
+The decoding algorithm we are going to implement was described in [Novel Polynomial Basis and Its Application to Reed-Solomon Erasure Codes](https://arxiv.org/abs/1404.3458).
+In my implementation, it is essentially O(N*log(N)) and only 1.5-3 times slower than encoding.
 
 
 ### Encoding in O(N*log(N))
