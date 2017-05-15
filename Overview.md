@@ -11,7 +11,7 @@ Topics:
 * [Discrete Fourier transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform)
 * [Fast Fourier transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform) and in particular
 [Cooley–Tukey FFT algorithm](https://en.wikipedia.org/wiki/Cooley%E2%80%93Tukey_FFT_algorithm) as O(N*log(N)) algorithm implementing DFT
-* [Number-theoretic transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform_(general)) as modified FFT
+* [Fast Number-Theoretic Transform](https://en.wikipedia.org/wiki/Discrete_Fourier_transform_(general)) as modified FFT
 employing the same add/sub/mul operations and unity roots, but in Galois Field
 
 Once you grasped all these topics, you can grab some FFT implementation and convert it to NTT.
@@ -51,7 +51,7 @@ So we just multiply source `A` vector by Vandermonde `(n+k)*n` matrix generated 
 It's guaranteed that any `n` different `a[i]` numbers form an invertible Vandermonde matrix, so we can restore from any `n` remaining words after a loss.
 * [Plank proposed](http://web.eecs.utk.edu/~plank/plank/papers/SPE-04.html) to start with Vandermonde `(n+k)*n` matrix
 and then apply the [Gaussian elimination](https://en.wikipedia.org/wiki/Gaussian_elimination) in order to convert it to some `(I,M)` matrix.
-As far as we perform this operation only once per a lot of ECC computations, we can ignore the time required by this operation.
+As far as we perform this operation only once per a lot of parity computations, we can ignore the time required by this operation.
 * PAR2 format employs `(I,V)` encoding matrix, i.e. it employs Vandermonde `k*n` matrix to compute `k` ecc words while employing the systematic code.
 Despite of special form of `a[i]` used in their Vandermonde matrix, the restoration matrix is sometimes non-invertible.
 But it seems to be a good compromise between the speed/complexity of computations and recovery strength.

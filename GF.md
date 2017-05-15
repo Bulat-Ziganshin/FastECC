@@ -8,7 +8,7 @@ This program is useful for researching ring properties, in particular maximal or
 
 ### Lucky number: choosing the best base for computations
 
-Since GF(2^n) doesn't have much roots of unity, NTT-based Reed-Solomon codes implementation can't perform computations in this field.
+Since GF(2^n) doesn't have much roots of unity, efficient NTT-based Reed-Solomon codes implementation can't perform computations in this field.
 Instead, we need to use other Galois Field, or even Ring modulo some number. GF(p^n) has a maximal order of p^n-1.
 For rings, the maximal order is defined by complex formula that you can find in chapter `39.7 Composite modulus: the ring Z=mZ` of [FxtBook](http://www.jjj.de/fxt/fxtbook.pdf).
 
@@ -85,7 +85,7 @@ After the flag 0, remaining input items contains values of remaining output elem
 
 Once input (source) data are recoded in this way, we need to store the extra bit in the way which ensure that the bit can be restored
 in any situation when the data block can be restored. The best way to ensure this, that I found, is to save the extra bit as one more (1025'th)
-source word. So, all operations are performed on 4100-byte blocks, and ECC sectors stored are 4100-byte long. Sad, but I don't see better choice.
+source word. So, all operations are performed on 4100-byte blocks, and parity sectors stored are 4100-byte long. Sad, but I don't see better choice.
 Remaining bits of the extra word can be used to store block checksum, although i don't see much gain in that.
 
 Of course, when 64-bit base and/or GF(p^2) field are used, extra data will be increased to 8-16 bytes.

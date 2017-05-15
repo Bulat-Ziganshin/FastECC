@@ -27,6 +27,6 @@ cl -Fe%name%32m.exe -Fa%name%32.asm -arch:SSE2 %options_ms_cl% %options_ms_x86%
 ::g++ -std=c++14 -m32 -O3 %main% -static -fopenmp -o%name%32g-sse2 -msse2 -DSIMD=SSE2 -Xlinker --large-address-aware
 ::g++ -std=c++14 -m32 -O3 %main% -static -fopenmp -o%name%32g      -mmmx              -Xlinker --large-address-aware
 
-::cl -Feprime.exe -O2 -EHsc prime.cpp
+::cl -Feprime.exe -O2 -EHsc prime.cpp -link %options_ms_x86%
 
 del *.exe.bak *.obj *.res >nul 2>nul

@@ -1,4 +1,4 @@
-FastECC implements O(N*log(N)) [Reed-Solomon coder], running at 1.2 GB/s on i7-4770 in (2^20, 2^19) config,
+FastECC implements O(N*log(N)) [Reed-Solomon coder], running at [1.2 GB/s] on [i7-4770] in (2^20, 2^19) config,
 i.e. calculating 524288 parity blocks from 524288 data blocks.
 Version 0.1 implements only encoding, so it isn't yet ready for real use.
 
@@ -16,11 +16,11 @@ And computations in GF(2^32), implemented in the same way, will build one millio
 The only exception is closed-source [RSC32 by persicum] with O(N*log(N)) speed, i.e. it spends O(log(N)) time per parity block.
 Its speed with million parity blocks is 100 MB/s, i.e. it computes one million of 4 KB parity blocks
 from one million of data blocks (processing 8 GB overall) in just 80 seconds.
-Note that all speeds mentioned here are measured on i7-4770, employing all features available in a particular program -
+Note that all speeds mentioned here are measured on [i7-4770], employing all features available in a particular program -
 including multi-threading, SIMD and x64 support.
 
 FastECC is open-source library implementing O(N*log(N)) encoding algorithm.
-It computes million parity blocks at 1.2 GB/s.
+It computes million parity blocks at [1.2 GB/s].
 Future versions will implement decoding that's also `O(N*log(N))`, although 1.5-3 times slower than encoding.
 Current implementation is limited to 2^20 blocks, removing this limit is the main priority for future work
 aside of decoder implementation.
@@ -41,7 +41,7 @@ Moreover, it works with binary data, so no need for [recoding](GF.md#data-packin
 ## How
 
 All O(N*log(N)) Reed-Solomon implementations I'm aware of, use fast transforms like FFT or FWT.
-FastECC employs Number-Theoretic Transform that is just an FFT over integer field or ring.
+FastECC employs fast Number-Theoretic Transform that is just an FFT over integer field or ring.
 Let's see how it works. Note that below by `length-N polynomial` I mean any polynomial with order < N.
 
 For any given set of N points, only one length-N polynomial may go through all these points.
@@ -184,6 +184,8 @@ So, overall, FastECC should replace any use of 16-bit RS codecs, while LDPC and 
 - [Hacker News story](https://news.ycombinator.com/item?id=14290617)
 
 
+[1.2 GB/s]: Benchmarks.md#reed-solomon-encoding
+[i7-4770]: https://ark.intel.com/products/75122/Intel-Core-i7-4770-Processor-8M-Cache-up-to-3_90-GHz
 [Reed-Solomon coder]: https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction
 [MultiPar]: https://www.livebusinesschat.com/smf/index.php?board=396.0
 [RSC32 by persicum]: https://www.livebusinesschat.com/smf/index.php?board=399.0

@@ -1,5 +1,6 @@
 
-All tests are performed on i7-4770 with 2-channel DDR3-1600 memory, employing all CPU cores.
+All tests are performed on [i7-4770](https://ark.intel.com/products/75122/Intel-Core-i7-4770-Processor-8M-Cache-up-to-3_90-GHz)
+with 2-channel DDR3-1600 memory, employing all CPU cores.
 Speeds are measured in MiB/s (mebibytes/second), add 5% to convert into MB/s (megabytes/second).
 
 Executables are compiled by (-DSIMD selects vectorizable code path):
@@ -19,7 +20,7 @@ For NTT(2^20), we expect speed of 1 GB/s for SSE2 version, and 2 GB/s for AVX2 v
 
 ### Reed-Solomon encoding
 
-Reed-Solomon encoding (2^19 source blocks => 2^19 ECC blocks, 2052 bytes each) in GF(0xFFF00001):
+Reed-Solomon encoding (2^19 data blocks => 2^19 parity blocks, 2052 bytes each) in GF(0xFFF00001):
 ```
 rs64g-avx2:  1766 ms = 1162 MiB/s,  cpu 12932 ms = 732%,  os 31 ms
 rs64g-sse2:  2354 ms = 872 MiB/s,  cpu 16677 ms = 708%,  os 62 ms

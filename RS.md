@@ -7,7 +7,7 @@
 ### Prior art
 
 The encoding and decoding algorithms implemented by FastECC were described in the paper
-[An Efficient (n,k) Information Dispersal Algorithm based on Fermat Number Transforms](http://ieeexplore.ieee.org/document/6545355/)
+[An Efficient (n,k) Information Dispersal Algorithm based on Fermat Number Transforms](https://pdfs.semanticscholar.org/141d/c4ee4cca45b4ed1c07f890f758e427597db8.pdf)
 published in 2013 by Sian-Jheng Lin and Wei-Ho Chung.
 
 The following is my own investigations written prior to reading this great paper :)
