@@ -1,24 +1,24 @@
 
 ### Program usage
 
-`RS [N=19 [SIZE=2052]]` - benchmark NTT-based Reed-Solomon encoding using 2^N input (source) blocks and 2^N output (ECC) blocks, each block SIZE bytes long
+`RS [N=19 [SIZE=2052]]` - benchmark NTT-based Reed-Solomon encoding using 2^N input (data) blocks and 2^N output (parity) blocks, each block SIZE bytes long
 
 
-### Lacan scheme: prior art
+### Prior art
 
-This scheme was first described in [Systematic MDS Erasure Codes Based on Vandermonde Matrices](http://oatao.univ-toulouse.fr/2176/1/Lacan_2176.pdf)
-and then employed in [RFC 5510: Reed-Solomon Forward Error Correction (FEC) Schemes](https://tools.ietf.org/html/rfc5510).
+The encoding and decoding algorithms implemented by FastECC were described in the paper
+[An Efficient (n,k) Information Dispersal Algorithm based on Fermat Number Transforms](http://ieeexplore.ieee.org/document/6545355/)
+published in 2013 by Sian-Jheng Lin and Wei-Ho Chung.
 
-The decoding algorithm we are going to implement was described in [Novel Polynomial Basis and Its Application to Reed-Solomon Erasure Codes](https://arxiv.org/abs/1404.3458).
-In my implementation, it is essentially O(N*log(N)) and only 1.5-3 times slower than encoding.
+The following is my own investigations written prior to reading this great paper :)
 
 
 ### Encoding in O(N*log(N))
 
 In this scheme, we consider N input words as values at N fixed points of some polynomial p(x) with order<N,
-and compute for ECC data values of p(x) at another M fixed points ("fixed" here means that these points depend only on N and M).
+and for parity words compute values of p(x) at another M fixed points ("fixed" here means that these points depend only on N and M).
 It requires intermediate step of computing N polynomial coefficients.
-We can compute polynomial coefficients from values with iNTT(N) (i.e. order-N Inverse NTT), and then compute polynomial values with NTT(M1) where M1>=max(N,M).
+We can compute polynomial coefficients from values with iNTT(N) (i.e. order-N inverse NTT), and then compute polynomial values with NTT(M1) where M1>=max(N,M).
 
 But again, since we can compute (multiplicative) NTT in GF(p) only with orders dividing p-1, the actual algorithm is:
 1. Find N1>=N such that N divides p-1
@@ -27,7 +27,7 @@ But again, since we can compute (multiplicative) NTT in GF(p) only with orders d
 4. Find M1>=max(N1,M) such that M1 divides p-1
 5. Extend intermediate vector of size N1 with zeroes (considered as higher polynomial coefficients) to the size M1
 6. Perform order-M1 NTT
-7. Output some M values from NTT result as ECC data
+7. Output some M values from NTT result as parity data
 
 In order to allow fast decoding, the M1 points employed in the second NTT should inlcude the N1 points from the first iNTT, that requires M1=k*N1.
 So, we need to correct fourth step of the algorithm:
