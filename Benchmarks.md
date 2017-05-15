@@ -195,7 +195,7 @@ ntt64m +b:               Butterfly: 529 ms = 36051 MiB/s,  cpu 3604 ms = 681%,  
 
 ### Small NTT
 
-How NTT speed depends on the order and Ring base. These tests are single-threaded (`set OMP_NUM_THREADS=1`)
+How NTT speed depends on the NTT order and the Ring choice. These tests are single-threaded (`set OMP_NUM_THREADS=1`)
 
 ```
 C:\>for %s in (20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1) do @ntt64g-avx2 s %s

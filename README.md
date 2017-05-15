@@ -9,7 +9,7 @@ Version 0.1 implements only encoding, so it isn't yet ready for real use.
 
 Almost all existing Reed-Solomon ECC implementations employ matrix multiplication and thus have O(N^2) speed behavior,
 i.e. they can produce N parity blocks in O(N^2) time, thus spending O(N) time per block.
-F.e. the fastest implementation I know, [MultiPar2], can compute 1000 parity blocks at the speed ~50MB/s,
+F.e. the fastest implementation I know, [MultiPar], can compute 1000 parity blocks at the speed ~50MB/s,
 but only at ~2 MB/s in its maximum configuration, 32000 parity blocks.
 And computations in GF(2^32), implemented in the same way, will build one million parity blocks at 50 KB/s.
 
@@ -24,6 +24,16 @@ It computes million parity blocks at 1.2 GB/s.
 Future versions will implement decoding that's also `O(N*log(N))`, although 1.5-3 times slower than encoding.
 Current implementation is limited to 2^20 blocks, removing this limit is the main priority for future work
 aside of decoder implementation.
+And if you are interested in smaller configs, look at [small NTT benchmarks](Benchmarks.md#small-ntt) -
+FastECC outperforms quadratic algorithms ([ISA-L], [CM256] and [MultiPar]) starting from ~32 parity blocks.
+
+For comparison - [Wirehair], the best open-source LDPC codec I know, is
+[already as fast](https://github.com/catid/wirehair#benchmarks) as [FastECC](Benchmarks.md#reed-solomon-encoding),
+but can be made [several times faster using SSE1](https://github.com/catid/wirehair/issues/2).
+It's limited to 64000 source blocks, but amount of parity blocks can be arbitrary.
+It's an LDPC codec, so not [MDS](https://en.wikipedia.org/wiki/Singleton_bound#MDS_codes),
+but chances that it needs even a single extra block to recover is [as low as 0.1%](https://github.com/catid/wirehair#discussion-overhead-reductions-with-gf216).
+Moreover, it works with binary data, so no need for [recoding](GF.md#data-packing) and no need for extra space to store "overflow" bits.
 
 
 <a name="how"/>
@@ -128,7 +138,7 @@ if you need more than 256 data+parity blocks, FastECC should be faster than any 
 Moreover, FastECC is free from patent restrictions that has any **fast** 16-bit RS codec using PSHUFB (i.e. SSSE3).
 And slow codecs are several times slower than MultiPar, so they have even less chances.
 
-There is a great alternative to FastECC - [catid wirehair](https://github.com/catid/wirehair) library, but afair it also may be covered with patents.
+There is a great alternative to FastECC - [Wirehair] library, but afair it also may be covered with patents.
 It's [already as fast](https://github.com/catid/wirehair#benchmarks) as [FastECC](Benchmarks.md#reed-solomon-encoding),
 but can be made [several times faster using SSE1](https://github.com/catid/wirehair/issues/2).
 It's limited to 64000 source blocks, but amount of parity blocks can be arbitrary.
@@ -156,7 +166,7 @@ So, overall, FastECC should replace any use of 16-bit RS codecs, while LDPC and 
 
 <a name="more"/>
 
-## If you want to know more
+## Want to know more?
 
 - [NTT: Number-theoretic transform](Overview.md): what one needs to know in order to implement O(N*log(N)) Reed-Solomon error-correcting codes
 - [GF(p).cpp: fast computations in finite fields and rings](GF.md)
@@ -175,7 +185,7 @@ So, overall, FastECC should replace any use of 16-bit RS codecs, while LDPC and 
 
 
 [Reed-Solomon coder]: https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction
-[MultiPar2]: https://www.livebusinesschat.com/smf/index.php?board=396.0
+[MultiPar]: https://www.livebusinesschat.com/smf/index.php?board=396.0
 [RSC32 by persicum]: https://www.livebusinesschat.com/smf/index.php?board=399.0
 [Vandermonde matrix]: https://en.wikipedia.org/wiki/Vandermonde_matrix
 [the fast encoding]: https://github.com/Bulat-Ziganshin/FastECC/blob/bed3a3f4c228ee7ab61cee1b7c28b6d4d76df02d/RS.cpp#L37
@@ -185,3 +195,4 @@ So, overall, FastECC should replace any use of 16-bit RS codecs, while LDPC and 
 [fast polynomial interpolation]: https://www.google.com/search?q=fast+polynomial+interpolation "fast polynomial interpolation"
 [ISA-L]: https://github.com/01org/isa-l
 [CM256]: https://github.com/catid/cm256
+[Wirehair]: https://github.com/catid/wirehair
