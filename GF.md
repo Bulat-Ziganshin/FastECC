@@ -61,7 +61,7 @@ NTT(2^N) require N passes over data, so its speed will be 10/N or 20/N GB/s per 
 F.e. NTT(2^20) using Mod(2^64-1) operations will run at 1 GB/s per core, 4 GB/s overall!!!
 
 Unfortunately, it seems that while we can perform NTT/iNTT and thus RS encoding in arbitrary rings at O(N*log(N)) speed,
-RS decoding require full division support and therefore can be implemented only in Galois Fields.
+fast RS decoding require full division support and therefore can be implemented only in Galois Fields.
 
 Great overview of GF(p) Butterfly optimizations was provided by David Harvey in the talk
 [Faster arithmetic for number-theoretic transforms](http://web.maths.unsw.edu.au/~davidharvey/talks/fastntt-2-talk.pdf).
@@ -71,21 +71,34 @@ Great overview of GF(p) Butterfly optimizations was provided by David Harvey in 
 
 ### Efficient data packing
 
-I also found a way to recode 4 KBytes to the 0xFFF00001 base using just 1 extra bit.
+I also found a way to recode 4 KBytes to the 0..0xFFF00000 range using just one extra bit.
 Idea is the following: we have 1024 32-bit values and we don't use the highest value 0xFFF00000 in our encoding,
 so we just need to recode 1024 12-bit values from base 4096 to base 4095.
 
 Decoding algorithm (translating data from the base 4095 to the base 4096): if the extra bit is 0, then keep input data intact.
-If this bit is 1, it means that there is at least one 0xFFF value in output data.
-In that case, first entry of the input data holds index of the first 0xFFF in output data (10 bits), plus the flag (1 - there are more 0xFFF in output data).
+If the bit is 1, this means that there is at least one 0xFFF value in output data.
+In this case, first entry of the input data holds index of the first 0xFFF in output data (10 bits), plus the flag (1 - there are more 0xFFF in output data).
 If the flag is 1, then the next input item, again, contains index of the next 0xFFF in output data plus continuation flag.
 After the flag 0, remaining input items contains values of remaining output elements.
+
+Overall, this idea allows to encode up to n/2 values in range 0..n into the same amount of values in range 0..n-1 plus a single bit.
+Such encoding is always bit-optimal, i.e. we lose less than one bit of code space.
+Encoding speed on random data will be 24-48 bytes/cycle when using SSE2/AVX2:
+
+```asm
+    PCMPGTD  xmm0, broadcast(0xFFF00001)
+    PCMPGTD  xmm1, broadcast(0xFFF00001)
+    POR      xmm0, xmm1
+    PMOVMSKB eax, xmm0
+    CMP      eax, 0
+    JNE      conversion_required
+```
 
 ---
 
 Once input (source) data are recoded in this way, we need to store the extra bit in the way which ensure that the bit can be restored
-in any situation when the data block can be restored. The best way to ensure this, that I found, is to save the extra bit as one more (1025'th)
-source word. So, all operations are performed on 4100-byte blocks, and parity sectors stored are 4100-byte long. Sad, but I don't see better choice.
-Remaining bits of the extra word can be used to store block checksum, although i don't see much gain in that.
+in any situation when the data block can be restored. The best way to ensure this, that I found, is to save the extra bit as one more (1025'th) source word.
+So, RS encoding/decoding operations are performed on 4100-byte blocks, and parity sectors stored are 4100-byte long. Sad, but I don't see any better alternative.
+Remaining bits of the extra word can be used to store block checksum, although I don't see much gain in that.
 
-Of course, when 64-bit base and/or GF(p^2) field are used, extra data will be increased to 8-16 bytes.
+Of course, when 64-bit base and/or GF(p^2) field is used, extra data will be increased to 8-16 bytes.
