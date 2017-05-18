@@ -1,23 +1,30 @@
-FastECC implements O(N*log(N)) [Reed-Solomon coder], running at [1.2 GB/s] on [i7-4770] in (2^20, 2^19) config,
+FastECC implements FFT-based O(N*log(N)) [Reed-Solomon coder], running at [1.2 GB/s] on [i7-4770] for (n,k)=(2^20,2^19),
 i.e. calculating 524288 parity blocks from 524288 data blocks.
-Version 0.1 implements only encoding, so it isn't yet ready for real use.
 
+It's also [pretty fast for small orders](Benchmarks.md#small-ntt), outperforming previously fastest Reed-Solomon library, Intel [ISA-L] for 64+ parity blocks.
+
+The encoding and decoding algorithms going to be implemented by FastECC were described in the paper
+[An Efficient (n,k) Information Dispersal Algorithm based on Fermat Number Transforms](https://pdfs.semanticscholar.org/141d/c4ee4cca45b4ed1c07f890f758e427597db8.pdf)
+by Sian-Jheng Lin and Wei-Ho Chung. FastECC v0.1 implements only encoding, so it isn't yet ready for real use.
 
 <a name="what"/>
 
 ## What
 
-Almost all existing Reed-Solomon ECC implementations employ matrix multiplication and thus have O(N^2) speed behavior,
+Almost all existing Reed-Solomon [ECC] implementations employ matrix multiplication and thus have O(N^2) speed behavior,
 i.e. they can produce N parity blocks in O(N^2) time, thus spending O(N) time per block.
 F.e. the fastest implementation I know, [MultiPar], can compute 1000 parity blocks at the speed ~50MB/s,
 but only at ~2 MB/s in its maximum configuration, 32000 parity blocks.
 And computations in GF(2^32), implemented in the same way, will build one million parity blocks at 50 KB/s.
 
-The only exception is closed-source [RSC32 by persicum] with O(N*log(N)) speed, i.e. it spends O(log(N)) time per parity block.
+One of few exceptions is closed-source [RSC32 by persicum] with O(N*log(N)) speed, i.e. it spends O(log(N)) time per parity block.
 Its speed with million parity blocks is 100 MB/s, i.e. it computes one million of 4 KB parity blocks
 from one million of data blocks (processing 8 GB overall) in just 80 seconds.
 Note that all speeds mentioned here are measured on [i7-4770], employing all features available in a particular program -
 including multi-threading, SIMD and x64 support.
+
+Another notable exception with similar speed is library by Lin, Han and Chung, implementing algorithm described in their paper
+["Novel Polynomial Basis and Its Application to Reed-Solomon Erasure Codes"](https://github.com/SianJhengLin/Fast-algorithms-of-Reed-Solomon-erasure-codes).
 
 FastECC is open-source library implementing O(N*log(N)) encoding algorithm.
 It computes million parity blocks at [1.2 GB/s].
@@ -93,13 +100,13 @@ Now we just need to perform [polynomial long division] f(x)=p(x)/l(x), that is [
 
 ## Fastest
 
-But there is even faster algorithm! Let's build derivative `p'(x) = f'(x)*l(x) + f(x)*l'(x)`
+But there is even faster algorithm! Let's build formal derivative `p'(x) = f'(x)*l(x) + f(x)*l'(x)`
 and evaluate it at each e[i]: `p'(e[i]) = f'(e[i])*l(e[i]) + f(e[i])*l'(e[i]) = f(e[i])*l'(e[i])` since l(e[i])=0.
 Moreover, l'(e[i])!=0, so we can recover all the lost f(e[i]) values by simple scalar divisions: `f(e[i]) = p'(e[i]) / l'(e[i])`!!!
 
 So, the entire algorithm is:
 - transform polynomials p and l into coefficient space
-- compute their derivatives p' and l'
+- compute their formal derivatives p' and l'
 - transform p' and l' into value space
 - evaluate each `f(e[i]) = p'(e[i]) / l'(e[i])`
 
@@ -135,7 +142,7 @@ I made a quick speed comparison and found that FastECC is faster than 16-bit RS 
 close to the maximum possible for 8-bit RS. So, it seems that FastECC territory starts right where 8-bit codecs territory ends -
 if you need more than 256 data+parity blocks, FastECC should be faster than any 16-bit RS coders, otherwise 8-bit [ISA-L] or [CM256] is preferable.
 
-Moreover, FastECC is free from patent restrictions that has any **fast** 16-bit RS codec using PSHUFB (i.e. SSSE3).
+Moreover, FastECC is free from patent restrictions that has any fast RS codec employing PSHUFB (i.e. SSSE3).
 And slow codecs are several times slower than MultiPar, so they have even less chances.
 
 There is a great alternative to FastECC - [Wirehair] library, but afair it also may be covered with patents.
@@ -184,9 +191,10 @@ So, overall, FastECC should replace any use of 16-bit RS codecs, while LDPC and 
 - [Hacker News story](https://news.ycombinator.com/item?id=14290617)
 
 
+[Reed-Solomon coder]: https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction
 [1.2 GB/s]: Benchmarks.md#reed-solomon-encoding
 [i7-4770]: https://ark.intel.com/products/75122/Intel-Core-i7-4770-Processor-8M-Cache-up-to-3_90-GHz
-[Reed-Solomon coder]: https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction
+[ECC]: https://en.wikipedia.org/wiki/Error_detection_and_correction#Error-correcting_codes
 [MultiPar]: https://www.livebusinesschat.com/smf/index.php?board=396.0
 [RSC32 by persicum]: https://www.livebusinesschat.com/smf/index.php?board=399.0
 [Vandermonde matrix]: https://en.wikipedia.org/wiki/Vandermonde_matrix
