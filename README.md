@@ -1,5 +1,5 @@
-FastECC implements FFT-based O(N*log(N)) [Reed-Solomon coder], running at [1.2 GB/s] on [i7-4770] for (n,k)=(2^20,2^19),
-i.e. calculating 524288 parity blocks from 524288 data blocks.
+FastECC implements FFT-based O(N*log(N)) [Reed-Solomon coder], running at [1.2 GB/s][Benchmarks]
+on [i7-4770] for (n,k)=(2^20,2^19), i.e. calculating 524288 parity blocks from 524288 data blocks.
 
 It's also [pretty fast for small orders](Benchmarks.md#small-ntt), outperforming previously fastest Reed-Solomon library, Intel [ISA-L] for 64+ parity blocks.
 
@@ -23,19 +23,22 @@ from one million of data blocks (processing 8 GB overall) in just 80 seconds.
 Note that all speeds mentioned here are measured on [i7-4770], employing all features available in a particular program -
 including multi-threading, SIMD and x64 support.
 
-Another notable exception with similar speed is library by Lin, Han and Chung, implementing algorithm described in their paper
-["Novel Polynomial Basis and Its Application to Reed-Solomon Erasure Codes"](https://github.com/SianJhengLin/Fast-algorithms-of-Reed-Solomon-erasure-codes).
-
 FastECC is open-source library implementing O(N*log(N)) encoding algorithm.
 It computes million parity blocks at [1.2 GB/s].
 Future versions will implement decoding that's also `O(N*log(N))`, although 1.5-3 times slower than encoding.
 Current implementation is limited to 2^20 blocks, removing this limit is the main priority for future work
 aside of decoder implementation.
 And if you are interested in smaller configs, look at [small NTT benchmarks](Benchmarks.md#small-ntt) -
-FastECC outperforms quadratic algorithms ([ISA-L], [CM256] and [MultiPar]) starting from ~32 parity blocks.
+FastECC outperforms quadratic algorithms ([ISA-L], [CM256] and [MultiPar]) starting from 32-64 parity blocks.
 
-For comparison - [Wirehair], the best open-source LDPC codec I know, is
-[already as fast](https://github.com/catid/wirehair#benchmarks) as [FastECC](Benchmarks.md#reed-solomon-encoding),
+[Leopard] is a new library, [faster](https://github.com/catid/leopard/blob/master/Benchmarks.md) than [FastECC][Benchmarks], especially for small orders.
+It implements similar algorithm, described in newer paper by the same authors:
+[Lin, Han and Chung "Novel Polynomial Basis and Its Application to Reed-Solomon Erasure Codes"](https://github.com/SianJhengLin/Fast-algorithms-of-Reed-Solomon-erasure-codes).
+
+You can also find a few [research-grade libraries](https://www.livebusinesschat.com/smf/index.php?topic=5888.msg42216#msg42216) with O(N*log(N)) speed.
+
+For comparison - [Wirehair], the best open-source LDPC codec I know, is O(N) and
+[already as fast](https://github.com/catid/wirehair#benchmarks) as [FastECC][Benchmarks],
 but can be made [several times faster using SSE1](https://github.com/catid/wirehair/issues/2).
 It's limited to 64000 source blocks, but amount of parity blocks can be arbitrary.
 It's an LDPC codec, so not [MDS](https://en.wikipedia.org/wiki/Singleton_bound#MDS_codes),
@@ -132,6 +135,8 @@ These controllers work with analog signals and tend to use **soft** decoders to 
 and can deal even with something like 7.4 which is more probably 8 rather than 6). Soft decoders are absolutely out of my Math skills,
 so if someone will build soft decoder, it will be not FastECC, but other great lib (and most probably not free).
 
+Also, FastECC implements only erasure decoding. I have no idea how to implement error decoding nor plan to learn it.
+
 There are some applications still. PAR3 is one of them - it's still interesting for some people, although not many.
 Various communication applications and P2P data storage are also frequently mentioned in [discussions](#discussion).
 
@@ -142,11 +147,11 @@ I made a quick speed comparison and found that FastECC is faster than 16-bit RS 
 close to the maximum possible for 8-bit RS. So, it seems that FastECC territory starts right where 8-bit codecs territory ends -
 if you need more than 256 data+parity blocks, FastECC should be faster than any 16-bit RS coders, otherwise 8-bit [ISA-L] or [CM256] is preferable.
 
-Moreover, FastECC is free from patent restrictions that has any fast RS codec employing PSHUFB (i.e. SSSE3).
+Moreover, FastECC is free from patent restrictions that has any fast RS codec employing PSHUFB (i.e. SSSE3) including [Leopard].
 And slow codecs are several times slower than MultiPar, so they have even less chances.
 
 There is a great alternative to FastECC - [Wirehair] library, but afair it also may be covered with patents.
-It's [already as fast](https://github.com/catid/wirehair#benchmarks) as [FastECC](Benchmarks.md#reed-solomon-encoding),
+It's [already as fast](https://github.com/catid/wirehair#benchmarks) as [FastECC][Benchmarks],
 but can be made [several times faster using SSE1](https://github.com/catid/wirehair/issues/2).
 It's limited to 64000 source blocks, but amount of parity blocks can be arbitrary.
 It's an LDPC codec, so not [MDS](https://en.wikipedia.org/wiki/Singleton_bound#MDS_codes),
@@ -167,8 +172,10 @@ So, overall, FastECC should replace any use of 16-bit RS codecs, while LDPC and 
 - [x] Encoder (version 0.1)
 - [ ] Decoder (version 0.2)
 - [ ] Public API (see issue #1)
-- [ ] SSE2/AVX2-intrinsics with runtime selection of scalar/sse2/avx2 code path
-- [ ] NTT of sizes!=2^n
+- [ ] SSE2/AVX2/NEON-intrinsics with runtime selection of scalar/sse2/avx2/neon code path
+- [ ] NTT of sizes!=2^n: NTT5/NTT7/NTT13, PFA and MFA+PFA combined algo
+- [ ] Optimizations for asymmetric cases (n!=2k)
+- [ ] Optimized code for GF(2^31-1), GF(2^61-1) and GF(p^2)
 
 
 <a name="more"/>
@@ -192,7 +199,7 @@ So, overall, FastECC should replace any use of 16-bit RS codecs, while LDPC and 
 
 
 [Reed-Solomon coder]: https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction
-[1.2 GB/s]: Benchmarks.md#reed-solomon-encoding
+[Benchmarks]: Benchmarks.md#reed-solomon-encoding
 [i7-4770]: https://ark.intel.com/products/75122/Intel-Core-i7-4770-Processor-8M-Cache-up-to-3_90-GHz
 [ECC]: https://en.wikipedia.org/wiki/Error_detection_and_correction#Error-correcting_codes
 [MultiPar]: https://www.livebusinesschat.com/smf/index.php?board=396.0
@@ -205,4 +212,5 @@ So, overall, FastECC should replace any use of 16-bit RS codecs, while LDPC and 
 [fast polynomial interpolation]: https://www.google.com/search?q=fast+polynomial+interpolation "fast polynomial interpolation"
 [ISA-L]: https://github.com/01org/isa-l
 [CM256]: https://github.com/catid/cm256
+[Leopard]: https://github.com/catid/leopard
 [Wirehair]: https://github.com/catid/wirehair
